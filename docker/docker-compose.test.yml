@@ -1,0 +1,40 @@
+name: project-who-tf-test
+services:
+  mariadb-test:
+    image: mariadb:11.4.5
+    environment:
+      MARIADB_DATABASE: who_tf_test
+      MARIADB_USER: who_tf_test
+      MARIADB_PASSWORD: who_tf_test
+      MARIADB_ROOT_PASSWORD: who_tf_test
+    ports:
+      - "8383:3306"
+    volumes:
+      - who-tf-test-mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pwho_tf_test" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-test:
+    image: valkey/valkey:9.0-alpine3.22
+    ports:
+      - "8384:6379"
+    volumes:
+      - who-tf-test-redis-data:/data
+    healthcheck:
+      test: [ "CMD", "valkey-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: valkey-server --appendonly yes
+
+
+volumes:
+  who-tf-test-mariadb-data:
+    driver: local
+  who-tf-test-redis-data:
+    driver: local
