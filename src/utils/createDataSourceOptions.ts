@@ -14,8 +14,8 @@ export function createDataSourceOptions(config: AppConfig): DataSourceOptions {
     const parsedUrlConfigs = parseDsnString(config.database.url);
     return {
         ...parsedUrlConfigs,
-        entities: [`${__dirname}/entities/*Entity.{ts,js}`],
-        migrations: [`${__dirname}/migrations/*.{ts,js}`],
+        entities: [`${__dirname}/../database/entities/*Entity.{ts,js}`],
+        migrations: [`${__dirname}/../database/migrations/*.{ts,js}`],
         migrationsTableName: 'typeorm_migrations',
         namingStrategy: new InflectionNamingStrategy(),
         logger: typeormLogger,

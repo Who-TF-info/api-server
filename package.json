@@ -25,7 +25,12 @@
         "docker:test:start": "docker compose -f ./docker/docker-compose.test.yml up -d",
         "docker:test:stop": "docker compose -f ./docker/docker-compose.test.yml down",
         "docker:test:clear": "docker compose -f ./docker/docker-compose.test.yml down -v",
-        "docker:test:logs": "docker compose -f ./docker/docker-compose.test.yml logs -f"
+        "docker:test:logs": "docker compose -f ./docker/docker-compose.test.yml logs -f",
+        "migration:create": "bash scripts/create-migration.sh",
+        "migration:generate": "bash scripts/generate-migration.sh",
+        "migration:show": "bun --bun typeorm migration:show -d src/database/dataSource.ts",
+        "migration:run": "bun --bun typeorm migration:run -d src/database/dataSource.ts",
+        "migration:revert": "bun --bun typeorm migration:revert -d src/database/dataSource.ts"
     },
     "devDependencies": {
         "@biomejs/biome": "^2.3.4",
