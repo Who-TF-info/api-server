@@ -1,8 +1,9 @@
 import { type AppConfig, AppConfigSchema } from '@app/types/AppConfig';
 import { NodeEnv } from '@app/types/node';
 import { merge } from 'ts-deepmerge';
+import type { DeepPartial } from 'typeorm';
 
-export const createConfig = (overrides?: Partial<AppConfig>): AppConfig => {
+export const createConfig = (overrides?: DeepPartial<AppConfig>): AppConfig => {
     const env = (Bun.env.NODE_ENV || NodeEnv.development) as NodeEnv;
     const isDevelopment = env === NodeEnv.development;
     const isTesting = env === NodeEnv.test;
@@ -14,6 +15,9 @@ export const createConfig = (overrides?: Partial<AppConfig>): AppConfig => {
             isTesting,
         },
         http: {
+            corsOrigins: String(Bun.env.HTTP_CORS_ORIGINS || '')
+                .split(',')
+                .map((s) => s.trim()),
             host: Bun.env.HTTP_HOST || 'localhost',
             port: Number(Bun.env.HTTP_PORT || 3000),
         },

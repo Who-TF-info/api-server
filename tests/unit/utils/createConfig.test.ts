@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import type { AppConfig } from '@app/types/AppConfig';
 import { createConfig } from '@app/utils/createConfig';
+import type { DeepPartial } from 'typeorm';
 
 describe('createConfig', () => {
     describe('config creation logic', () => {
@@ -15,7 +16,7 @@ describe('createConfig', () => {
         });
 
         it('should merge overrides with default config', () => {
-            const overrides: Partial<AppConfig> = {
+            const overrides: DeepPartial<AppConfig> = {
                 http: {
                     port: 9000,
                     host: 'custom-host',

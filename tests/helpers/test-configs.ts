@@ -8,7 +8,7 @@ export const baseConfig: AppConfig = {
         isDevelopment: true,
         isTesting: false,
     },
-    http: { host: 'localhost', port: 3000 },
+    http: { corsOrigins: [], host: 'localhost', port: 3000 },
     logger: { usePretty: true, level: 'info' },
     cacheUrl: undefined, // Use in-memory cache for tests
     porkbun: {
