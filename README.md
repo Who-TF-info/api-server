@@ -141,6 +141,11 @@ src/
 
 ## Development
 
-See [CLAUDE.md](./CLAUDE.md) for detailed development guidelines and project-specific instructions.
+### Documentation
+- **[CLAUDE.md](./CLAUDE.md)** - Development guidelines and project-specific instructions
+- **[TypeORM Conventions](./docs/typeorm-conventions.md)** - Entity development patterns and database conventions
+
+### Database Development
+All entities must extend `AppEntity` and follow our naming conventions. The project uses automatic table/column name conversion with Zod validation. See the [TypeORM Conventions guide](./docs/typeorm-conventions.md) for complete patterns and examples.
 
 Built with [Bun](https://bun.com) - A fast all-in-one JavaScript runtime.

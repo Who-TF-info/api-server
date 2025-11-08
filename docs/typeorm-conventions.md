@@ -1,0 +1,358 @@
+# TypeORM Entity Development Guide
+
+## Overview
+
+This project uses a sophisticated TypeORM setup with custom naming strategies, Zod integration for runtime validation, and standardized entity patterns. All entities must follow these conventions for consistency and automatic database mapping.
+
+## Core Architecture
+
+### Base Entity Class
+
+All entities **MUST** extend from `src/database/core/AppEntity.ts`:
+
+```typescript
+import { AppEntity } from '@app/database/core/AppEntity';
+
+@Entity()
+export class YourEntity extends AppEntity {
+    // Your properties here
+}
+```
+
+The `AppEntity` provides:
+- **Primary Key**: Auto-incrementing `id` field
+- **Timestamps**: `createdAt`, `updatedAt` automatically managed
+- **Soft Delete**: `deletedAt` for logical deletion
+- **Zod Integration**: Runtime validation for all base fields
+
+### Naming Strategy
+
+We use `InflectionNamingStrategy` which automatically converts:
+
+| Entity Class | Table Name | Property | Column Name |
+|--------------|------------|----------|-------------|
+| `UserEntity` | `users` | `apiKey` | `api_key` |
+| `DomainNameEntity` | `domain_names` | `fullDomain` | `full_domain` |
+| `TopLevelDomainEntity` | `top_level_domains` | `whoisServer` | `whois_server` |
+
+**Key Rules:**
+- Entity classes ending with `Entity` → suffix stripped for table name
+- CamelCase properties → snake_case columns
+- Acronym-safe conversion (`APIKey` → `api_key`, not `a_p_i_key`)
+- Automatic pluralization (`User` → `users`)
+
+## Entity Development Patterns
+
+### 1. Basic Entity Structure
+
+```typescript
+import { AppEntity } from '@app/database/core/AppEntity';
+import { Column, Entity, Index } from 'typeorm';
+import { ZodProperty } from 'typeorm-zod';
+import { z } from 'zod';
+
+@Entity()
+export class ExampleEntity extends AppEntity {
+    @Column({ type: 'varchar', length: 255, nullable: false })
+    @ZodProperty(z.string().max(255))
+    name: string;
+
+    @Column({ type: 'boolean', default: true, nullable: false })
+    @Index() // For frequently queried columns
+    @ZodProperty(z.boolean().default(true))
+    isActive: boolean;
+}
+```
+
+### 2. Required Decorators
+
+#### Every Property Needs TWO Decorators:
+
+1. **TypeORM Decorator**: `@Column()`, `@ManyToOne()`, etc.
+2. **Zod Decorator**: `@ZodProperty()` for runtime validation
+
+```typescript
+@Column({ type: 'varchar', length: 64, nullable: false })
+@ZodProperty(z.string().max(64).min(32)) // ✅ Both decorators required
+apiKey: string;
+```
+
+### 3. Column Types & Validation
+
+#### Strings
+```typescript
+// Short strings
+@Column({ type: 'varchar', length: 255, nullable: false })
+@ZodProperty(z.string().max(255))
+name: string;
+
+// Long text
+@Column({ type: 'text', nullable: true })
+@ZodProperty(z.string().optional())
+description?: string;
+
+// Enums
+@Column({ type: 'enum', enum: ['dns', 'porkbun', 'whois'], nullable: true })
+@ZodProperty(z.enum(['dns', 'porkbun', 'whois']).optional())
+method?: 'dns' | 'porkbun' | 'whois';
+```
+
+#### Numbers
+```typescript
+// Integers
+@Column({ type: 'int', nullable: false, default: 0 })
+@ZodProperty(z.number().int().default(0))
+count: number;
+
+// Big integers (for large IDs)
+@Column({ type: 'bigint', nullable: false })
+@ZodProperty(z.number())
+requestId: number;
+```
+
+#### Dates & Timestamps
+```typescript
+// Optional date
+@Column({ type: 'timestamp', nullable: true })
+@ZodProperty(z.date().optional())
+checkedAt?: Date;
+
+// Required timestamp
+@Column({ type: 'timestamp', nullable: false })
+@ZodProperty(z.date())
+requestedAt: Date;
+```
+
+#### JSON Columns
+```typescript
+// JSON data with proper typing
+@Column({ type: 'json', nullable: true })
+@ZodProperty(z.array(z.string()).optional())
+nameServers?: string[];
+
+@Column({ type: 'json', nullable: true })
+@ZodProperty(z.record(z.unknown()).optional())
+whoisData?: Record<string, unknown>;
+```
+
+### 4. Indexes & Constraints
+
+#### Single Column Indexes
+```typescript
+@Column({ type: 'varchar', length: 64, nullable: false })
+@Index({ unique: true }) // Unique constraint
+@ZodProperty(z.string().max(64))
+apiKey: string;
+
+@Column({ type: 'boolean', default: true, nullable: false })
+@Index() // Regular index for queries
+@ZodProperty(z.boolean().default(true))
+isActive: boolean;
+```
+
+#### Composite Indexes (at class level)
+```typescript
+@Entity()
+@Index(['userId', 'requestedAt']) // Composite index for queries
+@Index(['domainId', 'requestType']) // Multiple indexes allowed
+export class RequestEntity extends AppEntity {
+    // properties...
+}
+```
+
+### 5. Relationships
+
+#### Many-to-One (Foreign Keys)
+```typescript
+import { Relation } from 'typeorm';
+
+@Entity()
+export class DomainEntity extends AppEntity {
+    @ManyToOne(() => DomainNameEntity, { nullable: false })
+    @JoinColumn({ name: 'domain_name_id' }) // Explicit FK name
+    @ZodProperty(z.instanceof(DomainNameEntity))
+    domainName: Relation<DomainNameEntity>;
+
+    @Column({ type: 'int', nullable: false })
+    @Index() // Index foreign keys
+    @ZodProperty(z.number())
+    domainNameId: number;
+}
+```
+
+#### One-to-Many
+```typescript
+@Entity()
+export class UserEntity extends AppEntity {
+    @OneToMany(() => RequestEntity, (request) => request.user)
+    @ZodProperty(z.array(z.instanceof(RequestEntity)))
+    requests: Relation<RequestEntity[]>;
+}
+```
+
+### 6. Nullable vs Optional Properties
+
+```typescript
+// Database allows NULL, TypeScript optional
+@Column({ type: 'timestamp', nullable: true })
+@ZodProperty(z.date().nullable().optional())
+lastRequestAt?: Date | null;
+
+// Database NOT NULL, but optional with default
+@Column({ type: 'boolean', default: false, nullable: false })
+@ZodProperty(z.boolean().default(false))
+isActive: boolean; // Not optional in TS
+```
+
+## Complete Entity Example
+
+Based on the database schema, here's a complete domain entity:
+
+```typescript
+import { AppEntity } from '@app/database/core/AppEntity';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { ZodProperty } from 'typeorm-zod';
+import { z } from 'zod';
+import type { Relation } from 'typeorm';
+import { DomainNameEntity } from './DomainNameEntity';
+import { TopLevelDomainEntity } from './TopLevelDomainEntity';
+
+@Entity()
+@Index(['availabilityTtlExpiresAt'])
+@Index(['whoisTtlExpiresAt'])
+@Index(['expirationDate'])
+@Index(['registrar'])
+export class DomainEntity extends AppEntity {
+    // Foreign key relationships
+    @ManyToOne(() => DomainNameEntity, { nullable: false })
+    @JoinColumn({ name: 'domain_name_id' })
+    @ZodProperty(z.instanceof(DomainNameEntity))
+    domainName: Relation<DomainNameEntity>;
+
+    @Column({ type: 'int', nullable: false })
+    @Index()
+    @ZodProperty(z.number())
+    domainNameId: number;
+
+    @ManyToOne(() => TopLevelDomainEntity, { nullable: false })
+    @JoinColumn({ name: 'top_level_domain_id' })
+    @ZodProperty(z.instanceof(TopLevelDomainEntity))
+    topLevelDomain: Relation<TopLevelDomainEntity>;
+
+    @Column({ type: 'int', nullable: false })
+    @Index()
+    @ZodProperty(z.number())
+    topLevelDomainId: number;
+
+    // Core domain data
+    @Column({ type: 'varchar', length: 255, nullable: false })
+    @Index({ unique: true })
+    @ZodProperty(z.string().max(255))
+    fullDomain: string;
+
+    // Availability caching
+    @Column({ type: 'boolean', nullable: true })
+    @ZodProperty(z.boolean().nullable().optional())
+    isAvailable?: boolean | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @ZodProperty(z.date().nullable().optional())
+    availabilityCheckedAt?: Date | null;
+
+    @Column({
+        type: 'enum',
+        enum: ['dns', 'porkbun', 'whois'],
+        nullable: true
+    })
+    @ZodProperty(z.enum(['dns', 'porkbun', 'whois']).nullable().optional())
+    availabilityMethod?: 'dns' | 'porkbun' | 'whois' | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @Index()
+    @ZodProperty(z.date().nullable().optional())
+    availabilityTtlExpiresAt?: Date | null;
+
+    // WHOIS caching
+    @Column({ type: 'json', nullable: true })
+    @ZodProperty(z.record(z.unknown()).nullable().optional())
+    whoisData?: Record<string, unknown> | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @ZodProperty(z.date().nullable().optional())
+    whoisCheckedAt?: Date | null;
+
+    @Column({ type: 'enum', enum: ['rdap', 'whois'], nullable: true })
+    @ZodProperty(z.enum(['rdap', 'whois']).nullable().optional())
+    whoisSource?: 'rdap' | 'whois' | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @Index()
+    @ZodProperty(z.date().nullable().optional())
+    whoisTtlExpiresAt?: Date | null;
+
+    // Parsed WHOIS fields
+    @Column({ type: 'varchar', length: 255, nullable: true })
+    @Index()
+    @ZodProperty(z.string().max(255).nullable().optional())
+    registrar?: string | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @ZodProperty(z.date().nullable().optional())
+    registrationDate?: Date | null;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @Index()
+    @ZodProperty(z.date().nullable().optional())
+    expirationDate?: Date | null;
+
+    @Column({ type: 'json', nullable: true })
+    @ZodProperty(z.array(z.string()).nullable().optional())
+    nameServers?: string[] | null;
+
+    @Column({ type: 'json', nullable: true })
+    @ZodProperty(z.array(z.string()).nullable().optional())
+    status?: string[] | null;
+}
+```
+
+## Best Practices
+
+### ✅ DO
+- Always extend `AppEntity`
+- Use both `@Column()` and `@ZodProperty()` decorators
+- Add indexes for frequently queried columns
+- Use explicit column types and lengths
+- Prefer `nullable: true` over TypeScript optionals for database fields
+- Use `Relation<T>` wrapper for relationship properties
+- Create composite indexes for common query patterns
+
+### ❌ DON'T
+- Skip Zod validation decorators
+- Use `any` types in Zod schemas
+- Forget to index foreign keys
+- Mix database nullability with TypeScript optionality incorrectly
+- Use overly long varchar lengths without constraints
+
+### Performance Tips
+- Index columns used in WHERE clauses
+- Use composite indexes for multi-column queries
+- Consider JSON column types for flexible data
+- Use appropriate integer sizes (int vs bigint)
+- Add partial indexes for conditional queries
+
+### Validation Patterns
+```typescript
+// API keys with specific format
+@ZodProperty(z.string().regex(/^ak_[a-f0-9]{32}$/))
+
+// URLs with protocol validation
+@ZodProperty(z.string().url())
+
+// Enum with specific values
+@ZodProperty(z.enum(['pending', 'completed', 'failed']))
+
+// Numbers with constraints
+@ZodProperty(z.number().int().min(0).max(9999))
+```
+
+This setup provides type safety, runtime validation, consistent naming, and excellent database performance through proper indexing strategies.
