@@ -4,6 +4,17 @@ This document contains project-specific guidelines for Claude when working on th
 
 ## Project Overview
 
+**IMPORTANT: This is a self-hosted microservice, NOT a SaaS platform.**
+
+Organizations deploy their own instances of Who-TF.info to run private WHOIS services. There are no central servers, user accounts, or subscription tiers. Each deployment is independent and owned by the deploying organization.
+
+### Self-Hosted Architecture Implications
+- **No rate limiting between users** - each organization controls their own usage
+- **Simple authentication** - API keys for internal applications/services
+- **Configuration-driven** - all settings via environment variables
+- **Data ownership** - all data stays within the organization's infrastructure
+- **Cost control** - organizations pay for their own external API usage
+
 This is a TypeScript-based WHOIS and domain availability microservice built with:
 - **Runtime**: Bun
 - **Framework**: Hono (lightweight web framework)
@@ -44,25 +55,28 @@ This is a TypeScript-based WHOIS and domain availability microservice built with
 - Use TypeORM entities for database models
 - Implement caching layer with configurable TTLs
 - Follow fail-fast strategy for domain availability checks
+- Design for single-organization deployment (no multi-tenancy complexity)
 
 ### API Design
 - RESTful endpoints under `/api/v1/`
-- JWT authentication for protected endpoints
-- Rate limiting implementation
+- Simple API key authentication (X-API-Key header)
 - Proper error handling with structured responses
-- Support for bulk operations
+- Support for synchronous bulk operations (domain + multiple TLDs)
+- External API protection (not user rate limiting)
 
 ### Testing Strategy
 - Unit tests for business logic
 - Integration tests for API endpoints
-- Load testing for performance validation
+- Docker-based testing environment
 - Mock external dependencies properly
+- Test with realistic self-hosted deployment scenarios
 
-### Performance Targets
+### Performance Targets (Per Instance)
 - Availability check: <100ms cached, <500ms fresh
 - WHOIS lookup: <200ms cached, <2000ms fresh
 - Cache hit rate: >80%
-- Bulk processing: 1000 domains/minute
+- Bulk processing: Synchronous with configurable concurrency
+- External API respect: Configurable delays to protect API quotas
 
 ## Key Features Implementation
 
@@ -86,24 +100,27 @@ This is a TypeScript-based WHOIS and domain availability microservice built with
 
 ## Environment Configuration
 
-Key environment variables to be aware of:
+Key environment variables for self-hosted deployment:
 - `DATABASE_URL` - MariaDB connection
 - `REDIS_URL` - Redis/Valkey connection
-- `PORKBUN_API_KEY` - Domain availability API
-- `JWT_SECRET` - Authentication
-- Various cache TTL configurations
+- `PORKBUN_API_KEY` - Domain availability API (deployer's account)
+- Cache TTL configurations (deployer-configurable)
+- External API timeouts and delays
+- Feature flags (RDAP, WHOIS fallback)
 
 ## Security Considerations
 
 - Input validation for domain names
-- Rate limiting to prevent API abuse
-- Secure secret management
-- Audit logging for API usage
-- JWT token authentication
+- External API protection (prevent quota exhaustion)
+- Secure secret management (API keys, database credentials)
+- Audit logging for internal usage tracking
+- Simple API key authentication
+- Network security for self-hosted deployment
 
 ## Deployment
 
-- Docker containerization
-- Docker Compose for development
-- Health check endpoints
-- Metrics and monitoring setup
+- **Primary delivery method**: Docker container for easy self-hosting
+- Docker Compose for complete stack deployment
+- Health check endpoints for monitoring
+- Documentation for various deployment scenarios (cloud, on-premises)
+- No central infrastructure or SaaS concerns

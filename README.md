@@ -1,6 +1,17 @@
 # Who-TF.info API Server
 
-A high-performance WHOIS and domain availability microservice built with TypeScript and Bun.
+A self-hosted, high-performance WHOIS and domain availability microservice built with TypeScript and Bun.
+
+## 🏠 Self-Hosted Architecture
+
+**This is NOT a SaaS platform.** Who-TF.info is designed for organizations to run their own private WHOIS microservice instances. You deploy it, you control it, you own your data.
+
+### Why Self-Hosted?
+- **Privacy**: Your domain queries never leave your infrastructure
+- **Cost Control**: You pay only for your own external API usage (PorkBun, WHOIS servers)
+- **Customization**: Configure cache TTLs, timeouts, and features for your needs
+- **No Rate Limits**: Set your own usage patterns and external API rate limiting
+- **Data Ownership**: All request logs and cached data stays in your database
 
 ## Overview
 
@@ -37,10 +48,13 @@ cp .env.example .env
 bun run dev
 ```
 
-### Docker Development
+### Docker Deployment (Recommended)
 
 ```bash
-# Start all services (database, cache, etc.)
+# Production deployment
+docker compose up -d
+
+# Development with hot reload
 bun run docker:start
 
 # View logs
@@ -64,13 +78,25 @@ bun run docker:stop
 ### Domain Availability
 ```http
 GET /api/v1/availability/{domain}
-Authorization: Bearer {jwt_token}
+X-API-Key: your_api_key_here
 ```
 
 ### WHOIS Data
 ```http
 GET /api/v1/whois/{domain}
-Authorization: Bearer {jwt_token}
+X-API-Key: your_api_key_here
+```
+
+### Bulk Operations
+```http
+POST /api/v1/bulk/availability
+X-API-Key: your_api_key_here
+Content-Type: application/json
+
+{
+  "domain_name": "mycompany",
+  "tlds": ["com", "org", "net", "io"]
+}
 ```
 
 ### Health Check
@@ -83,7 +109,23 @@ GET /health
 - **Availability Check**: <100ms (cached), <500ms (fresh)
 - **WHOIS Lookup**: <200ms (cached), <2000ms (fresh)
 - **Cache Hit Rate**: >80%
-- **Bulk Processing**: 1000 domains/minute
+- **Bulk Processing**: Synchronous, configurable concurrency
+
+## Authentication & Configuration
+
+### API Keys
+Create API keys for different applications/services in your organization:
+- Web applications
+- CI/CD pipelines
+- Analytics services
+- Testing environments
+
+### Configuration
+All settings are configurable via environment variables:
+- Cache TTLs (availability, WHOIS data, errors)
+- External API timeouts and delays
+- Database and Redis connection settings
+- Feature flags (RDAP, WHOIS fallback)
 
 ## Project Structure
 
