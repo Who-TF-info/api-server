@@ -11,7 +11,6 @@ describe('createConfig', () => {
             expect(config.nodeEnv).toBeDefined();
             expect(config.http).toBeDefined();
             expect(config.logger).toBeDefined();
-            expect(typeof config.cacheUrl).toBe('string');
             expect(config.porkbun).toBeDefined();
         });
 
@@ -41,8 +40,8 @@ describe('createConfig', () => {
             // Invalid config should throw due to schema validation
             expect(() => {
                 createConfig({
-                    cacheUrl: 'invalid-url',
-                } as Partial<AppConfig>);
+                    cacheUrl: 'invalid-url', // Invalid URL format
+                });
             }).toThrow();
         });
     });

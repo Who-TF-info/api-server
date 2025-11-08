@@ -21,10 +21,13 @@ export const createConfig = (overrides?: Partial<AppConfig>): AppConfig => {
             usePretty: isDevelopment || isTesting,
             level: Bun.env.LOGGER_LEVEL || 'info',
         },
-        cacheUrl: Bun.env.CACHE_URL || 'redis://localhost',
+        cacheUrl: Bun.env.CACHE_URL,
         porkbun: {
             apikey: Bun.env.PORKBUN_API_KEY || '',
             secretApiKey: Bun.env.PORKBUN_SECRET_KEY || '',
+        },
+        database: {
+            url: Bun.env.DATABASE_URL || 'sqlite://:memory:',
         },
     };
 
