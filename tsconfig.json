@@ -25,9 +25,16 @@
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "noPropertyAccessFromIndexSignature": false,
+
+        // paths
         "baseUrl": "./",
         "paths": {
             "@app/*": ["src/*"]
-        }
+        },
+
+        // decorators
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "strictPropertyInitialization": false
     }
 }

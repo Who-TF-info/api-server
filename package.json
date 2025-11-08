@@ -42,6 +42,7 @@
         "@keyvhq/core": "^2.1.11",
         "@keyvhq/redis": "^2.1.11",
         "hono": "^4.10.4",
+        "inflection": "^3.0.2",
         "mysql2": "^3.15.3",
         "pino": "^10.1.0",
         "pino-pretty": "^13.1.2",
@@ -51,6 +52,7 @@
         "ts-deepmerge": "^7.0.3",
         "tsyringe": "^4.10.0",
         "typeorm": "^0.3.27",
+        "typeorm-pino-logger": "^0.2.0",
         "typeorm-zod": "^1.0.0",
         "zod": "^4.1.12"
     }

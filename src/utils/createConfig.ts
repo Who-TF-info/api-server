@@ -26,6 +26,9 @@ export const createConfig = (overrides?: Partial<AppConfig>): AppConfig => {
             apikey: Bun.env.PORKBUN_API_KEY || '',
             secretApiKey: Bun.env.PORKBUN_SECRET_KEY || '',
         },
+        database: {
+            url: Bun.env.DATABASE_URL || 'sqlite://:memory:',
+        },
     };
 
     const config = merge(appConfigEnv, overrides ?? {});

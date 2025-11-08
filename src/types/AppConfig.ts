@@ -1,3 +1,4 @@
+import { DatabaseConfig } from '@app/types/DatabaseConfig';
 import { NodeEnv } from '@app/types/node';
 import { z } from 'zod';
 
@@ -20,6 +21,7 @@ export const AppConfigSchema = z.object({
         apikey: z.string(),
         secretApiKey: z.string(),
     }),
+    database: DatabaseConfig,
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;

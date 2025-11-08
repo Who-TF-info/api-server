@@ -7,6 +7,7 @@
         "@keyvhq/core": "^2.1.11",
         "@keyvhq/redis": "^2.1.11",
         "hono": "^4.10.4",
+        "inflection": "^3.0.2",
         "mysql2": "^3.15.3",
         "pino": "^10.1.0",
         "pino-pretty": "^13.1.2",
@@ -16,6 +17,7 @@
         "ts-deepmerge": "^7.0.3",
         "tsyringe": "^4.10.0",
         "typeorm": "^0.3.27",
+        "typeorm-pino-logger": "^0.2.0",
         "typeorm-zod": "^1.0.0",
         "zod": "^4.1.12",
       },
@@ -307,6 +309,8 @@
 
     "import-meta-resolve": ["import-meta-resolve@4.2.0", "", {}, "sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg=="],
 
+    "inflection": ["inflection@3.0.2", "", {}, "sha512-+Bg3+kg+J6JUWn8J6bzFmOWkTQ6L/NHfDRSYU+EVvuKHDxUDHAXgqixHfVlzuBQaPOTac8hn43aPhMNk6rMe3g=="],
+
     "inherits": ["inherits@2.0.4", "", {}, "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="],
 
     "ini": ["ini@4.1.1", "", {}, "sha512-QQnnxNyfvmHFIsj7gkPcYymR8Jdw/o7mp5ZFihxn6h8Ci6fh3Dx4E1gPjpQEpIuPo9XVNY/ZUwh4BPMjGyL01g=="],
@@ -566,6 +570,8 @@
     "typed-array-buffer": ["typed-array-buffer@1.0.3", "", { "dependencies": { "call-bound": "^1.0.3", "es-errors": "^1.3.0", "is-typed-array": "^1.1.14" } }, "sha512-nAYYwfY3qnzX30IkA6AQZjVbtK6duGontcQm1WSG1MD94YLqK0515GNApXkoxKOWMusVssAHWLh9SeaoefYFGw=="],
 
     "typeorm": ["typeorm@0.3.27", "", { "dependencies": { "@sqltools/formatter": "^1.2.5", "ansis": "^3.17.0", "app-root-path": "^3.1.0", "buffer": "^6.0.3", "dayjs": "^1.11.13", "debug": "^4.4.0", "dedent": "^1.6.0", "dotenv": "^16.4.7", "glob": "^10.4.5", "sha.js": "^2.4.12", "sql-highlight": "^6.0.0", "tslib": "^2.8.1", "uuid": "^11.1.0", "yargs": "^17.7.2" }, "peerDependencies": { "@google-cloud/spanner": "^5.18.0 || ^6.0.0 || ^7.0.0", "@sap/hana-client": "^2.14.22", "better-sqlite3": "^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0", "ioredis": "^5.0.4", "mongodb": "^5.8.0 || ^6.0.0", "mssql": "^9.1.1 || ^10.0.1 || ^11.0.1", "mysql2": "^2.2.5 || ^3.0.1", "oracledb": "^6.3.0", "pg": "^8.5.1", "pg-native": "^3.0.0", "pg-query-stream": "^4.0.0", "redis": "^3.1.1 || ^4.0.0 || ^5.0.14", "reflect-metadata": "^0.1.14 || ^0.2.0", "sql.js": "^1.4.0", "sqlite3": "^5.0.3", "ts-node": "^10.7.0", "typeorm-aurora-data-api-driver": "^2.0.0 || ^3.0.0" }, "optionalPeers": ["@google-cloud/spanner", "@sap/hana-client", "better-sqlite3", "ioredis", "mongodb", "mssql", "mysql2", "oracledb", "pg", "pg-native", "pg-query-stream", "redis", "sql.js", "sqlite3", "ts-node", "typeorm-aurora-data-api-driver"], "bin": { "typeorm": "cli.js", "typeorm-ts-node-esm": "cli-ts-node-esm.js", "typeorm-ts-node-commonjs": "cli-ts-node-commonjs.js" } }, "sha512-pNV1bn+1n8qEe8tUNsNdD8ejuPcMAg47u2lUGnbsajiNUr3p2Js1XLKQjBMH0yMRMDfdX8T+fIRejFmIwy9x4A=="],
+
+    "typeorm-pino-logger": ["typeorm-pino-logger@0.2.0", "", { "peerDependencies": { "pino": "^9.7.0", "typeorm": "^0.3.25" } }, "sha512-Mekdb9DH0RWP4R0XbawU2wfLnZtGa+QmHZYODR7HJHC/8a27nZKy/PZbWje39bRct2nh7gGqzLp1+1/o2cAmPQ=="],
 
     "typeorm-zod": ["typeorm-zod@1.0.0", "", { "dependencies": { "chokidar": "^4.0.3", "commander": "^14.0.1", "fast-glob": "^3.3.3", "reflect-metadata": "^0.2.2", "typeorm": "^0.3.26" }, "peerDependencies": { "zod": "^3.20.0" }, "bin": { "typeorm-zod-codegen": "bin/cli.js" } }, "sha512-Pn40JMDzktksfFR9tlsthVEDIRre9wbQkizyDLAE3/RgxYlP6xKnzOQjwBk01pVujCfjtE5ft5y3/bnPmMb82Q=="],
 
