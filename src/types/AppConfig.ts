@@ -16,7 +16,7 @@ export const AppConfigSchema = z.object({
         usePretty: z.boolean().optional().default(true),
         level: z.string().optional().default('info'),
     }),
-    cacheUrl: z.url(),
+    cacheUrl: z.url().optional(),
     porkbun: z.object({
         apikey: z.string(),
         secretApiKey: z.string(),

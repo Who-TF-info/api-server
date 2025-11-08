@@ -10,7 +10,7 @@ export const baseConfig: AppConfig = {
     },
     http: { host: 'localhost', port: 3000 },
     logger: { usePretty: true, level: 'info' },
-    cacheUrl: 'redis://localhost:6379',
+    cacheUrl: undefined, // Use in-memory cache for tests
     porkbun: {
         apikey: 'test-api-key',
         secretApiKey: 'test-secret-key',
