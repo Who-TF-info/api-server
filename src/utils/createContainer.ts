@@ -2,7 +2,7 @@ import type { AppConfig } from '@app/types/AppConfig';
 import { createBaseLogger } from '@app/utils/createBaseLogger';
 import { createCacheStore } from '@app/utils/createCacheStore';
 import Keyv from '@keyvhq/core';
-import type { Logger } from 'pino';
+import pino, { type Logger } from 'pino';
 import { PorkbunApiClient } from 'porkbun-api-client';
 import { KeyvTagManager, TaggedKeyv } from 'tagged-keyv-wrapper';
 import { container, type DependencyContainer, type InjectionToken, instanceCachingFactory } from 'tsyringe';
@@ -31,7 +31,8 @@ export const createContainer = (config: AppConfig): DependencyContainer => {
             return createBaseLogger(config);
         } catch (error) {
             console.error('Failed to create logger, falling back to console:', error);
-            return console as unknown as Logger;
+            // Create a console wrapper that implements Logger interface
+            return pino();
         }
     });
 
