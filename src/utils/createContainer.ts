@@ -1,11 +1,13 @@
 import type { AppConfig } from '@app/types/AppConfig';
 import { createBaseLogger } from '@app/utils/createBaseLogger';
 import { createCacheStore } from '@app/utils/createCacheStore';
+import { createDataSourceOptions } from '@app/utils/createDataSourceOptions';
 import Keyv from '@keyvhq/core';
 import pino, { type Logger } from 'pino';
 import { PorkbunApiClient } from 'porkbun-api-client';
 import { KeyvTagManager, TaggedKeyv } from 'tagged-keyv-wrapper';
 import { container, type DependencyContainer, type InjectionToken, instanceCachingFactory } from 'tsyringe';
+import { DataSource } from 'typeorm';
 
 // Simple string-based injection tokens for consistency
 export const AppLogger: InjectionToken<Logger> = 'Logger';
@@ -38,6 +40,12 @@ export const createContainer = (config: AppConfig): DependencyContainer => {
 
     // Register base Keyv instance
     registerFactory(appContainer, Keyv, () => createCacheStore(config.cacheUrl));
+
+    // creat typeorm datasource
+    registerFactory(appContainer, DataSource, () => {
+        const dataSourceOptions = createDataSourceOptions(config);
+        return new DataSource(dataSourceOptions);
+    });
 
     // Register tagged cache wrapper
     registerFactory(appContainer, AppCache, (container) => {
