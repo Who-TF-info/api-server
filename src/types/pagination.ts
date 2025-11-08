@@ -2,9 +2,9 @@ import type { FindOptionsWhere } from 'typeorm';
 import { z } from 'zod';
 
 // Zod validation schemas for runtime type checking
-const OrderRecordSchema = z.record(z.string(), z.enum(['ASC', 'DESC']));
+const OrderRecordSchema = z.record(z.enum(['ASC', 'DESC']));
 const RelationsArraySchema = z.array(z.string());
-const WhereQuerySchema = z.record(z.string(), z.unknown());
+const WhereQuerySchema = z.record(z.unknown());
 
 export const PaginationOptionsSchema = z.object({
     page: z.number().min(1).default(1),

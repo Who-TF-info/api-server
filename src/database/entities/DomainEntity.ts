@@ -63,7 +63,7 @@ export class DomainEntity extends AppEntity {
 
     // WHOIS caching
     @Column({ type: 'json', nullable: true })
-    @ZodProperty(z.record(z.string(), z.unknown()).nullable().optional())
+    @ZodProperty(z.record(z.unknown()).nullable().optional())
     whoisData?: Record<string, unknown> | null;
 
     @Column({ type: 'timestamp', nullable: true })

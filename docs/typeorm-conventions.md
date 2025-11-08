@@ -355,4 +355,164 @@ export class DomainEntity extends AppEntity {
 @ZodProperty(z.number().int().min(0).max(9999))
 ```
 
-This setup provides type safety, runtime validation, consistent naming, and excellent database performance through proper indexing strategies.
+## Data Transfer Objects (DTOs)
+
+The project uses a clean DTO pattern for API layer data validation and transformation. DTOs are manually crafted TypeScript interfaces that define the shape of data for different operations, with runtime validation powered by the same Zod schemas used in entities.
+
+### DTO Structure
+
+Each entity has a corresponding DTO file in `src/database/dtos/` with four main interfaces:
+
+```typescript
+// Example: UserDtos.ts
+export interface UserDto extends BaseDto {
+    name: string;
+    apiKey: string;
+    isActive: boolean;
+    lastRequestAt: Date | null | undefined;
+    totalRequests: number;
+}
+
+export interface CreateUserDto extends Omit<UserDto, 'id' | 'created' | 'updated'> {}
+
+export interface UpdateUserDto extends Omit<Partial<UserDto>, 'id' | 'created' | 'updated'> {}
+
+export interface UserQueryDto extends Partial<UserDto> {}
+```
+
+### DTO Types Explained
+
+#### 1. **EntityDto** (Main Interface)
+- Extends `BaseDto` which provides `id`, `created`, `updated` fields
+- Represents the complete entity structure for API responses
+- Matches entity properties but uses simpler types (no relationships)
+
+#### 2. **CreateEntityDto**
+- For creating new records via API
+- Omits system-managed fields (`id`, `created`, `updated`)
+- All business-required fields are required
+
+#### 3. **UpdateEntityDto**
+- For updating existing records via API
+- All fields are optional (partial updates)
+- Omits system-managed fields
+- No `id` requirement (ID typically comes from URL path)
+
+#### 4. **EntityQueryDto**
+- For filtering/searching records via API
+- All fields are optional for flexible queries
+- Used in GET endpoints with query parameters
+
+### Runtime Validation
+
+Each DTO file includes validation functions powered by typeorm-zod:
+
+```typescript
+import { createEntitySchemas } from 'typeorm-zod';
+import { UserEntity } from '@app/database/entities';
+
+export const UserSchemas = createEntitySchemas(UserEntity, undefined);
+
+export const validateCreateUser = (data: unknown): CreateUserDto =>
+    UserSchemas.create.parse(data) as CreateUserDto;
+
+export const validateUpdateUser = (data: unknown): UpdateUserDto =>
+    UserSchemas.update.parse(data) as UpdateUserDto;
+
+export const validateQueryUser = (data: unknown): UserQueryDto =>
+    UserSchemas.query.parse(data) as UserQueryDto;
+```
+
+### Usage in API Endpoints
+
+DTOs provide type-safe API validation and clean separation between database entities and API contracts:
+
+```typescript
+// API Controller Example
+import { validateCreateUser, validateUpdateUser, type UserDto } from '@app/database/dtos';
+
+async function createUser(request: Request): Promise<UserDto> {
+    // Validate incoming request data
+    const userData = validateCreateUser(request.body);
+
+    // Create entity (ORM handles relationships)
+    const user = userRepository.create(userData);
+    const savedUser = await userRepository.save(user);
+
+    // Return clean DTO response
+    return {
+        id: savedUser.id,
+        name: savedUser.name,
+        apiKey: savedUser.apiKey,
+        isActive: savedUser.isActive,
+        lastRequestAt: savedUser.lastRequestAt,
+        totalRequests: savedUser.totalRequests,
+        created: savedUser.createdAt,
+        updated: savedUser.updatedAt,
+    };
+}
+
+async function updateUser(id: number, request: Request): Promise<UserDto> {
+    // Validate partial update data
+    const updateData = validateUpdateUser(request.body);
+
+    // Update entity
+    await userRepository.update(id, updateData);
+    const updatedUser = await userRepository.findOneByOrFail({ id });
+
+    // Return updated DTO
+    return mapEntityToDto(updatedUser);
+}
+```
+
+### DTO Benefits
+
+1. **Type Safety**: Compile-time checking for API data structures
+2. **Runtime Validation**: Zod schemas validate incoming requests
+3. **Clean APIs**: Consistent, predictable API contracts
+4. **Separation of Concerns**: API layer separate from database layer
+5. **Flexibility**: Different validation rules for create/update/query operations
+6. **Documentation**: DTOs serve as API documentation
+
+### DTO vs Entity Differences
+
+| Aspect | Entity | DTO |
+|--------|--------|-----|
+| **Purpose** | Database mapping | API contracts |
+| **Relationships** | Full TypeORM relations | Simple references (IDs) |
+| **Validation** | Database constraints | Request validation |
+| **Nullability** | Database-specific | API-friendly |
+| **Timestamps** | `createdAt`/`updatedAt` | `created`/`updated` |
+
+### Testing DTOs
+
+Each DTO validation function is thoroughly tested:
+
+```typescript
+// Example test patterns
+describe('validateCreateUser', () => {
+    it('should pass with valid complete data', () => {
+        const validData = {
+            name: 'John Doe',
+            apiKey: 'abcdef1234567890123456789012345678901234',
+            isActive: true,
+            totalRequests: 0,
+        };
+
+        const result = validateCreateUser(validData);
+        expect(result.name).toBe('John Doe');
+    });
+
+    it('should fail with missing required fields', () => {
+        const invalidData = { name: 'John Doe' }; // Missing apiKey
+
+        expect(() => validateCreateUser(invalidData)).toThrow();
+    });
+});
+```
+
+This DTO pattern provides a robust foundation for API development with clear contracts, validation, and type safety throughout the application stack.
+
+## Summary
+
+This setup provides type safety, runtime validation, consistent naming, and excellent database performance through proper indexing strategies. The combination of well-designed entities and clean DTOs creates a maintainable architecture that scales from development to production.
