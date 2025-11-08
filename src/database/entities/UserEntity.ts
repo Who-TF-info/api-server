@@ -5,11 +5,11 @@ import { z } from 'zod';
 
 @Entity()
 export class UserEntity extends AppEntity {
-    @Column({ type: 'varchar', length: '200', nullable: false })
+    @Column({ type: 'varchar', length: 200, nullable: false })
     @ZodProperty(z.string().max(200))
     name: string;
 
-    @Column({ type: 'varchar', length: '40', nullable: false })
+    @Column({ type: 'varchar', length: 40, nullable: false })
     @Index({ unique: true })
     @ZodProperty(z.string().max(40).min(32))
     apiKey: string;

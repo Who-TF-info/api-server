@@ -1,11 +1,12 @@
 import { AppEntity } from '@app/database/core/AppEntity';
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index } from 'typeorm';
 import { ZodProperty } from 'typeorm-zod';
 import { z } from 'zod';
 
 @Entity()
 export class SettingEntity extends AppEntity {
-    @PrimaryColumn({ type: 'varchar', length: 100 })
+    @Column({ type: 'varchar', length: 100, nullable: true })
+    @Index({ unique: true })
     @ZodProperty(z.string().max(100))
     key: string;
 

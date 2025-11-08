@@ -5,7 +5,7 @@ import { z } from 'zod';
 export abstract class AppEntity {
     @PrimaryGeneratedColumn('increment')
     @ZodProperty(z.number())
-    id: string;
+    id: number;
 
     @CreateDateColumn()
     @Index()
@@ -18,5 +18,5 @@ export abstract class AppEntity {
 
     @DeleteDateColumn()
     @ZodProperty(z.date().nullable())
-    deletedAt: Date;
+    deletedAt?: Date | null;
 }
