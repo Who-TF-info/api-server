@@ -1,9 +1,10 @@
+import { AppEntity } from '@app/database/core/AppEntity';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { ZodProperty } from 'typeorm-zod';
 import { z } from 'zod';
 
 @Entity()
-export class SettingEntity {
+export class SettingEntity extends AppEntity {
     @PrimaryColumn({ type: 'varchar', length: 100 })
     @ZodProperty(z.string().max(100))
     key: string;
@@ -15,8 +16,4 @@ export class SettingEntity {
     @Column({ type: 'varchar', length: 255, nullable: true })
     @ZodProperty(z.string().max(255).nullable().optional())
     description?: string | null;
-
-    @Column({ type: 'timestamp', nullable: false })
-    @ZodProperty(z.date())
-    updatedAt: Date;
 }

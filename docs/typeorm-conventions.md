@@ -513,6 +513,69 @@ describe('validateCreateUser', () => {
 
 This DTO pattern provides a robust foundation for API development with clear contracts, validation, and type safety throughout the application stack.
 
+## Repository Services
+
+The project includes standardized repository services that provide a consistent data access layer. Each entity has a corresponding repository service that extends the base functionality:
+
+### Available Repository Services
+
+- **DomainRepoService** (`src/database/db-service/DomainRepoService.ts`)
+- **DomainNameRepoService** (`src/database/db-service/DomainNameRepoService.ts`)
+- **TopLevelDomainRepoService** (`src/database/db-service/TopLevelDomainRepoService.ts`)
+- **RequestRepoService** (`src/database/db-service/RequestRepoService.ts`)
+- **SettingRepoService** (`src/database/db-service/SettingRepoService.ts`)
+- **UsersRepoService** (`src/database/db-service/UsersRepoService.ts`)
+
+### Repository Service Pattern
+
+All repository services follow a consistent pattern:
+
+```typescript
+import { BaseRepositoryService } from '@app/database/core/BaseRepositoryService';
+import type { RepositoryServiceInterface } from '@app/database/core/RepositoryServiceInterface';
+import { EntityName } from '@app/database/entities';
+import { inject, singleton } from 'tsyringe';
+import { DataSource } from 'typeorm';
+
+@singleton()
+export class EntityRepoService
+    extends BaseRepositoryService<EntityName>
+    implements RepositoryServiceInterface<EntityName>
+{
+    constructor(@inject(DataSource) dataSource: DataSource) {
+        super(dataSource, EntityName);
+    }
+}
+```
+
+### Repository Service Features
+
+Each repository service inherits comprehensive CRUD operations from `BaseRepositoryService`:
+
+- **Basic Operations**: `findById`, `findMany`, `findOne`, `save`, `update`, `remove`
+- **Advanced Operations**: `upsert`, `softDelete`, `restore`, `exists`, `count`
+- **Pagination**: `findPaginated` with configurable page size and sorting
+- **Type Safety**: Full TypeScript typing with entity-specific generics
+- **Dependency Injection**: Singleton pattern with tsyringe container
+
+### Usage in Services
+
+Repository services are injected into business logic services:
+
+```typescript
+@singleton()
+export class DomainService {
+    constructor(
+        @inject(DomainRepoService) private domainRepo: DomainRepoService,
+        @inject(DomainNameRepoService) private domainNameRepo: DomainNameRepoService
+    ) {}
+
+    async findDomainByName(name: string): Promise<DomainEntity | null> {
+        return this.domainRepo.findOne({ fullDomain: name });
+    }
+}
+```
+
 ## Summary
 
-This setup provides type safety, runtime validation, consistent naming, and excellent database performance through proper indexing strategies. The combination of well-designed entities and clean DTOs creates a maintainable architecture that scales from development to production.
+This setup provides type safety, runtime validation, consistent naming, and excellent database performance through proper indexing strategies. The combination of well-designed entities, clean DTOs, and standardized repository services creates a maintainable architecture that scales from development to production.
