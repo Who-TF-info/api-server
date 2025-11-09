@@ -17,7 +17,8 @@ export const createConfig = (overrides?: DeepPartial<AppConfig>): AppConfig => {
         http: {
             corsOrigins: String(Bun.env.HTTP_CORS_ORIGINS || '')
                 .split(',')
-                .map((s) => s.trim()),
+                .map((s) => s.trim())
+                .filter(Boolean),
             host: Bun.env.HTTP_HOST || 'localhost',
             port: Number(Bun.env.HTTP_PORT || 3000),
         },

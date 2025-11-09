@@ -2,6 +2,7 @@ import { InflectionNamingStrategy } from '@app/database/core/naming-strategy/Inf
 import type { AppConfig } from '@app/types/AppConfig';
 import { createBaseLogger } from '@app/utils/createBaseLogger';
 import { parseDsnString } from '@app/utils/parseDsnString';
+import type { Logger } from 'pino';
 import type { DataSource, DataSourceOptions } from 'typeorm';
 import { TypeOrmPinoLogger } from 'typeorm-pino-logger';
 
@@ -26,15 +27,25 @@ export function createDataSourceOptions(config: AppConfig): DataSourceOptions {
  * Initialize and return a database connection
  * Apps should use this with their own configuration
  */
-export async function initializeDatabase(ds: DataSource): Promise<DataSource> {
+export async function initializeDatabase(ds: DataSource, logger?: Logger): Promise<DataSource> {
     try {
         if (!ds.isInitialized) {
             await ds.initialize();
-            console.log(`✅ Database connection initialized (${ds.options.database})`);
+            const message = `Database connection initialized (${ds.options.database})`;
+            if (logger) {
+                logger.info(message);
+            } else {
+                console.log(`✅ ${message}`);
+            }
         }
         return ds;
     } catch (error) {
-        console.error('❌ Error during database initialization:', error);
+        const message = 'Error during database initialization';
+        if (logger) {
+            logger.error({ error }, message);
+        } else {
+            console.error(`❌ ${message}:`, error);
+        }
         throw error;
     }
 }
@@ -42,14 +53,24 @@ export async function initializeDatabase(ds: DataSource): Promise<DataSource> {
 /**
  * Gracefully close database connection
  */
-export async function closeDatabase(ds: DataSource): Promise<void> {
+export async function closeDatabase(ds: DataSource, logger?: Logger): Promise<void> {
     try {
         if (ds.isInitialized) {
             await ds.destroy();
-            console.log(`✅ Database connection closed (${ds.options.database})`);
+            const message = `Database connection closed (${ds.options.database})`;
+            if (logger) {
+                logger.info(message);
+            } else {
+                console.log(`✅ ${message}`);
+            }
         }
     } catch (error) {
-        console.error('❌ Error closing database connection:', error);
+        const message = 'Error closing database connection';
+        if (logger) {
+            logger.error({ error }, message);
+        } else {
+            console.error(`❌ ${message}:`, error);
+        }
         throw error;
     }
 }

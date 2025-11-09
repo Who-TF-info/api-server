@@ -10,8 +10,7 @@ async function startServer() {
     const logger = appContainer.resolve(AppLogger);
 
     // Initialize database connection
-    await initializeDatabase(dataSource);
-    logger.info('✅ Database connection initialized');
+    await initializeDatabase(dataSource, logger);
 
     const { host: hostname, port } = appConfig.http;
     const server = serve({
@@ -29,24 +28,17 @@ async function startServer() {
 const { server, logger, dataSource } = await startServer();
 
 // Graceful shutdown handling
-process.on('SIGTERM', async () => {
-    logger.info('SIGTERM received, shutting down gracefully');
+// Graceful shutdown helper function
+async function gracefulShutdown(signal: string) {
+    logger.info(`${signal} received, shutting down gracefully`);
     await server.stop();
     try {
-        await closeDatabase(dataSource);
+        await closeDatabase(dataSource, logger);
     } catch (err) {
         logger.error(err as Error, 'Error closing database during shutdown');
     }
     process.exit(0);
-});
+}
 
-process.on('SIGINT', async () => {
-    logger.info('SIGINT received, shutting down gracefully');
-    await server.stop();
-    try {
-        await closeDatabase(dataSource);
-    } catch (err) {
-        logger.error(err as Error, 'Error closing database during shutdown');
-    }
-    process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
