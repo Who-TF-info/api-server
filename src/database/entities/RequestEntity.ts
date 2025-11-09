@@ -9,9 +9,6 @@ import { UserEntity } from './UserEntity';
 @Entity()
 @Index(['userId', 'requestedAt'])
 @Index(['domainId', 'requestedAt'])
-@Index(['requestType'])
-@Index(['statusCode'])
-@Index(['requestedAt'])
 export class RequestEntity extends AppEntity {
     // Foreign key relationships
     @ManyToOne(() => UserEntity, { nullable: false })

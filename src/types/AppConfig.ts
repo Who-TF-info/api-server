@@ -11,6 +11,7 @@ export const AppConfigSchema = z.object({
     http: z.object({
         host: z.string(),
         port: z.number(),
+        corsOrigins: z.array(z.string()).optional().default([]),
     }),
     logger: z.object({
         usePretty: z.boolean().optional().default(true),

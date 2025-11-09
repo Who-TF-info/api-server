@@ -7,10 +7,6 @@ import { DomainNameEntity } from './DomainNameEntity';
 import { TopLevelDomainEntity } from './TopLevelDomainEntity';
 
 @Entity()
-@Index(['availabilityTtlExpiresAt'])
-@Index(['whoisTtlExpiresAt'])
-@Index(['expirationDate'])
-@Index(['registrar'])
 export class DomainEntity extends AppEntity {
     // Foreign key relationships
     @ManyToOne(() => DomainNameEntity, { nullable: false })
