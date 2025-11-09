@@ -30,7 +30,8 @@
         "migration:generate": "bash scripts/generate-migration.sh",
         "migration:show": "bun --bun typeorm migration:show -d src/database/dataSource.ts",
         "migration:run": "bun --bun typeorm migration:run -d src/database/dataSource.ts",
-        "migration:revert": "bun --bun typeorm migration:revert -d src/database/dataSource.ts"
+        "migration:revert": "bun --bun typeorm migration:revert -d src/database/dataSource.ts",
+        "cli": "bun src/cli.ts"
     },
     "devDependencies": {
         "@biomejs/biome": "^2.3.4",
@@ -47,6 +48,7 @@
         "@keyvhq/core": "^2.1.11",
         "@keyvhq/redis": "^2.1.11",
         "@keyvhq/sqlite": "^2.1.11",
+        "commander": "^14.0.2",
         "hono": "^4.10.4",
         "inflection": "^3.0.2",
         "mysql2": "^3.15.3",
