@@ -1,5 +1,6 @@
+import { BaseCacheableService } from '@app/services/core/BaseCacheableService';
 import type Keyv from '@keyvhq/core';
-import type { Level, Logger } from 'pino';
+import type { Logger } from 'pino';
 
 export type BaseRemoteDataFetcherOptions = {
     name: string;
@@ -7,22 +8,18 @@ export type BaseRemoteDataFetcherOptions = {
     cache: Keyv;
 };
 
-export abstract class BaseRemoteDataFetcher<TRaw = Record<string, unknown>, TTransformed = Record<string, unknown>> {
-    protected logger: Logger;
-    protected cache: Keyv;
+export abstract class BaseRemoteDataFetcher<
+    TRaw = Record<string, unknown>,
+    TTransformed = Record<string, unknown>,
+> extends BaseCacheableService {
     readonly name: string;
     abstract remoteUrl: string;
     protected requestOptions?: BunFetchRequestInit = undefined;
     protected cacheTtl: number = 3_600_000; // 1 hour default
 
     protected constructor({ logger, cache, name }: BaseRemoteDataFetcherOptions) {
-        this.logger = logger.child({ module: name });
-        this.cache = cache;
+        super(logger.child({ module: name }), cache);
         this.name = name;
-    }
-
-    set logLevel(level: Level) {
-        this.logger.level = level;
     }
 
     async fetch(): Promise<TTransformed> {
