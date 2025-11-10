@@ -5,7 +5,7 @@ import { NodeEnv } from '@app/types/node';
 import type { Logger } from 'pino';
 
 export class AuthService {
-    static testApiKey = 'test-api-key-123';
+    static testApiKey = 'tk_test_3a4b5c6d7e8f9g0h1i2j3k4l5m6n';
     protected usersRepo: UsersRepoService;
     protected env: NodeEnv;
     protected logger: Logger;
@@ -50,7 +50,9 @@ export class AuthService {
             isActive: true,
         });
         if (!user) {
-            this.logger.warn({ apiKey: `${apiKey?.substring(0, 8)}...` }, 'Invalid API key attempt');
+            // Hash the API key for secure logging using Bun's built-in hashing
+            const hashedKey = Bun.hash(apiKey).toString(16).substring(0, 12);
+            this.logger.warn({ apiKeyHash: hashedKey }, 'Invalid API key attempt');
         }
 
         return user;

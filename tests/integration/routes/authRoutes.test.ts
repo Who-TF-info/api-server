@@ -30,15 +30,21 @@ describe('Auth Routes Integration', () => {
 
             const body = (await response.json()) as AuthResponse;
 
-            // Verify response structure matches typed interface
+            // Verify response structure matches typed interface (without sensitive fields)
             expect(body).toEqual({
                 success: true,
                 user: expect.objectContaining({
-                    apiKey: AuthService.testApiKey,
                     isActive: true,
                     name: 'Test User',
+                    id: expect.any(Number),
+                    totalRequests: expect.any(Number),
+                    createdAt: expect.any(String),
+                    updatedAt: expect.any(String),
                 }),
             });
+
+            // Ensure sensitive fields are NOT present
+            expect(body.user).not.toHaveProperty('apiKey');
         });
 
         it('should return 401 for unauthenticated users', async () => {
@@ -57,7 +63,7 @@ describe('Auth Routes Integration', () => {
             const response = await honoApp.request('/api/v1/auth', {
                 method: 'GET',
                 headers: {
-                    apiKey: 'invalid-key-123',
+                    apiKey: 'tk_invalid_9x8y7z6w5v4u3t2s1r0q9p8o',
                 },
             });
 
