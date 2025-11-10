@@ -7,6 +7,7 @@
         "@keyvhq/core": "^2.1.11",
         "@keyvhq/redis": "^2.1.11",
         "@keyvhq/sqlite": "^2.1.11",
+        "commander": "^14.0.2",
         "hono": "^4.10.4",
         "inflection": "^3.0.2",
         "mysql2": "^3.15.3",
