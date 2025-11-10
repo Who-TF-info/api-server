@@ -1,3 +1,5 @@
+import { UsersRepoService } from '@app/database/db-service';
+import { AuthService } from '@app/services/AuthService';
 import type { AppConfig } from '@app/types/AppConfig';
 import { createBaseLogger } from '@app/utils/createBaseLogger';
 import { createCacheStore } from '@app/utils/createCacheStore';
@@ -63,6 +65,12 @@ export const createContainer = (config: AppConfig): DependencyContainer => {
                 apiKey: config.porkbun.apikey,
                 secretApiKey: config.porkbun.secretApiKey,
             })
+    );
+
+    registerFactory(
+        appContainer,
+        AuthService,
+        (c) => new AuthService(config.nodeEnv.env, c.resolve(UsersRepoService), c.resolve(AppLogger))
     );
 
     return appContainer;

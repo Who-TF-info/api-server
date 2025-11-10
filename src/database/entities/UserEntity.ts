@@ -19,11 +19,11 @@ export class UserEntity extends AppEntity {
     @ZodProperty(z.boolean().default(false))
     isActive: boolean;
 
-    @Column({ type: 'date', nullable: true })
+    @Column({ type: 'date', nullable: true, default: null })
     @ZodProperty(z.date().nullable().optional().default(null))
     lastRequestAt?: Date | null;
 
-    @Column({ type: 'int', nullable: false })
+    @Column({ type: 'int', nullable: false, default: 0 })
     @ZodProperty(z.number().default(0))
     totalRequests: number;
 }
