@@ -1,5 +1,6 @@
 import { CacheTTL } from '@app/constants/CacheTTL';
 import { TopLevelDomainRepoService } from '@app/database/db-service/TopLevelDomainRepoService';
+import { BaseCacheableService } from '@app/services/core/BaseCacheableService';
 import { AppLogger } from '@app/utils/createContainer';
 import Keyv from '@keyvhq/core';
 import type { Logger } from 'pino';
@@ -7,10 +8,8 @@ import { inject, singleton } from 'tsyringe';
 import { Like } from 'typeorm';
 
 @singleton()
-export class TldExtractor {
+export class TldExtractor extends BaseCacheableService {
     protected tldRepo: TopLevelDomainRepoService;
-    protected cache: Keyv;
-    protected logger: Logger;
     protected cacheTTL = CacheTTL.SECOND_LEVEL_TLDS;
 
     constructor(
@@ -18,9 +17,8 @@ export class TldExtractor {
         @inject(AppLogger) logger: Logger,
         @inject(Keyv) cache: Keyv
     ) {
-        this.logger = logger;
+        super(logger.child({ module: 'TldExtractor' }), cache);
         this.tldRepo = tldRepo;
-        this.cache = cache;
     }
 
     async extract(domain: string): Promise<string> {
