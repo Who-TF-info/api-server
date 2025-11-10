@@ -1,3 +1,5 @@
+import { toASCII } from 'node:punycode';
+import { CacheTTL } from '@app/constants/CacheTTL';
 import { BaseCacheableService } from '@app/services/core/BaseCacheableService';
 import type { ContactInfo, RdapResponse, VCardArray, WhoisData } from '@app/types/WhoisData';
 import { AppLogger } from '@app/utils/createContainer';
@@ -7,21 +9,23 @@ import { inject, singleton } from 'tsyringe';
 
 @singleton()
 export class RdapClient extends BaseCacheableService {
-    protected cacheTTL = 60 * 5 * 1000; // 5 minutes
+    protected cacheTTL = CacheTTL.RDAP_RESPONSE;
 
     constructor(@inject(AppLogger) logger: Logger, @inject(Keyv) cache: Keyv) {
         super(logger, cache);
     }
 
     async query(domain: string, rdapServer: string): Promise<WhoisData | null> {
-        const url = `${rdapServer.replace(/\/$/, '')}/domain/${domain}`;
-        const cacheKey = `RdapClient::query::${domain}::${rdapServer}`;
+        const punycodeDomain = toASCII(domain);
+        const url = `${rdapServer.replace(/\/$/, '')}/domain/${punycodeDomain}`;
+        const cacheKey = `RdapClient::query::${punycodeDomain}::${rdapServer}`;
         return this.rememberCache(
             cacheKey,
             async () => {
                 this.logger.debug(
                     {
                         domain,
+                        punycodeDomain,
                         server: rdapServer,
                         url,
                     },
@@ -103,7 +107,7 @@ export class RdapClient extends BaseCacheableService {
         };
 
         // Extract nameservers
-        const nameServers = response.nameservers?.map((ns) => ns.ldhName).filter(Boolean) as string[];
+        const nameServers = response.nameservers?.map((ns) => ns.ldhName || ns.unicodeName).filter(Boolean) as string[];
 
         // Extract DNSSEC status
         const dnssec = response.secureDNS?.delegationSigned || false;

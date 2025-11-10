@@ -1,3 +1,4 @@
+import { CacheTTL } from '@app/constants/CacheTTL';
 import { TopLevelDomainRepoService } from '@app/database/db-service/TopLevelDomainRepoService';
 import { AppLogger } from '@app/utils/createContainer';
 import Keyv from '@keyvhq/core';
@@ -10,7 +11,7 @@ export class TldExtractor {
     protected tldRepo: TopLevelDomainRepoService;
     protected cache: Keyv;
     protected logger: Logger;
-    protected cacheTTL = 60 * 60 * 24 * 7; // 1 week
+    protected cacheTTL = CacheTTL.SECOND_LEVEL_TLDS;
 
     constructor(
         @inject(TopLevelDomainRepoService) tldRepo: TopLevelDomainRepoService,
@@ -29,9 +30,15 @@ export class TldExtractor {
             throw new Error('Domain cannot be empty when extracting TLD');
         }
 
-        // Add basic domain format validation
-        if (!/^[a-zA-Z0-9.-]+$/.test(domain.trim())) {
-            throw new Error('Invalid domain format: contains invalid characters');
+        // Add domain format validation supporting Unicode and punycode (IDNs)
+        // Allow Unicode letters, numbers, hyphens, dots, and punycode prefix
+        // Disallow spaces and control characters
+        const trimmedDomain = domain.trim();
+        const punycodePattern = /^xn--[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*$/;
+        const unicodePattern = /^[\p{L}\p{N}\-.]+$/u;
+
+        if (!punycodePattern.test(trimmedDomain) && !unicodePattern.test(trimmedDomain)) {
+            throw new Error('Invalid domain format: contains invalid characters or unsupported format');
         }
 
         const normalized = this.normalize(domain);

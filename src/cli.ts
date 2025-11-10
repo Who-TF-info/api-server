@@ -50,15 +50,14 @@ try {
     await closeDatabase(dataSource, logger);
     process.exit(0);
 } catch (error: unknown) {
-    if (error instanceof Error && 'code' in error) {
-        // Handle commander built-in commands gracefully
-        if (
-            error.code === 'commander.help' ||
+    if (
+        error instanceof Error &&
+        'code' in error &&
+        (error.code === 'commander.help' ||
             error.code === 'commander.helpDisplayed' ||
-            error.code === 'commander.version'
-        ) {
-            process.exit(0);
-        }
+            error.code === 'commander.version')
+    ) {
+        process.exit(0);
     }
 
     logger.error({ error }, 'CLI command failed');

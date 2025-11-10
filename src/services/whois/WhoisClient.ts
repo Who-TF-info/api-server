@@ -1,4 +1,5 @@
 import net from 'node:net';
+import { CacheTTL } from '@app/constants/CacheTTL';
 import { BaseCacheableService } from '@app/services/core/BaseCacheableService';
 import type { WhoisData } from '@app/types/WhoisData';
 import { AppLogger } from '@app/utils/createContainer';
@@ -8,7 +9,14 @@ import { inject, singleton } from 'tsyringe';
 
 @singleton()
 export class WhoisClient extends BaseCacheableService {
-    protected cacheTTL = 60 * 5 * 1000; // 5 minutes
+    protected cacheTTL = CacheTTL.WHOIS_RESPONSE;
+    protected defaultTimeout = 10000; // 10 seconds
+
+    // Map of known slow servers and their preferred timeouts
+    protected slowServers: Record<string, number> = {
+        // Examples can be added as needed:
+        // 'whois.slowserver.com': 20000, // 20 seconds
+    };
 
     constructor(@inject(AppLogger) logger: Logger, @inject(Keyv) cache: Keyv) {
         super(logger, cache);
@@ -41,7 +49,10 @@ export class WhoisClient extends BaseCacheableService {
             });
 
             // Set timeout to prevent hanging connections
-            socket.setTimeout(10000); // 10 seconds
+            // Use configurable timeout, fallback to default
+            const timeout = this.slowServers[whoisServer] ?? this.defaultTimeout;
+            socket.setTimeout(timeout);
+            this.logger.debug({ whoisServer, timeout }, 'Set socket timeout');
 
             let data = '';
 
