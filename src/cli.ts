@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 import 'reflect-metadata';
 import { registerImportCommands } from '@app/commands/importCommands';
+import { DomainAvailabilityService } from '@app/services/DomainAvailabilityService';
+import { TldResolver } from '@app/services/lookup/TldResolver';
 import { createConfig } from '@app/utils/createConfig';
 import { AppLogger, createContainer } from '@app/utils/createContainer';
 import { closeDatabase, initializeDatabase } from '@app/utils/createDataSourceOptions';
@@ -21,6 +23,31 @@ program.name('domains-cli').description('CLI for Domains management and data imp
 
 registerImportCommands(program, container);
 
+program
+    .command('domain:lookup')
+    .description('gets whois data for a given domain')
+    .argument('domain', 'the domain to look up')
+    .option('--skip-availability', 'skip availability check and force WHOIS lookup')
+    .action(async (domain: string, options: { skipAvailability?: boolean }) => {
+        logger.level = 'debug';
+        const resolver = container.resolve(TldResolver);
+        const results = await resolver.getWhoisData(domain, options.skipAvailability);
+        logger.info(results);
+    });
+
+program
+    .command('domain:availability')
+    .description('check if domain is available')
+    .argument('domain', 'the domain to check')
+    .action(async (domain: string) => {
+        try {
+            const availabilityService = container.resolve(DomainAvailabilityService);
+            const isAvailable = await availabilityService.check(domain);
+            logger.info({ domain, available: isAvailable });
+        } catch (error) {
+            logger.error({ error }, 'Failed to check domain availability');
+        }
+    });
 // Error handling
 program.exitOverride();
 

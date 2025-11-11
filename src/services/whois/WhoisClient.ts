@@ -21,9 +21,9 @@ export class WhoisClient extends BaseCacheableService {
     constructor(@inject(AppLogger) logger: Logger, @inject(Keyv) cache: Keyv) {
         super(logger, cache);
     }
-    async query(domain: string, whoisServer: string): Promise<WhoisData | null> {
+    async query(domain: string, whoisServer: string): Promise<(WhoisData & { isCached: boolean }) | null> {
         const cacheKey = `WhoisClient::query::${domain}::${whoisServer}`;
-        return this.rememberCache(
+        return await this.rememberCacheWithHitInfo(
             cacheKey,
             async () => {
                 const rawResponse = await this.queryWhoisServer(domain, whoisServer);
