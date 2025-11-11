@@ -20,4 +20,27 @@ export abstract class BaseCacheableService extends BaseLoggableService {
         await this.cache.set(cacheKey, result, ttlMs);
         return result;
     }
+
+    protected async rememberCacheWithHitInfo<T = unknown>(
+        cacheKey: string,
+        func: () => Promise<T>,
+        ttlMs = 1000
+    ): Promise<(T & { isCached: boolean }) | null> {
+        const cached = await this.cache.get(cacheKey);
+        if (cached !== undefined) {
+            if (cached === null) {
+                return null;
+            }
+            return { ...(cached as T), isCached: true };
+        }
+
+        const result = await func();
+        await this.cache.set(cacheKey, result, ttlMs);
+
+        if (result === null) {
+            return null;
+        }
+
+        return { ...result, isCached: false };
+    }
 }

@@ -15,11 +15,11 @@ export class RdapClient extends BaseCacheableService {
         super(logger, cache);
     }
 
-    async query(domain: string, rdapServer: string): Promise<WhoisData | null> {
+    async query(domain: string, rdapServer: string): Promise<(WhoisData & { isCached: boolean }) | null> {
         const punycodeDomain = toASCII(domain);
         const url = `${rdapServer.replace(/\/$/, '')}/domain/${punycodeDomain}`;
         const cacheKey = `RdapClient::query::${punycodeDomain}::${rdapServer}`;
-        return this.rememberCache(
+        return await this.rememberCacheWithHitInfo(
             cacheKey,
             async () => {
                 this.logger.debug(
@@ -49,8 +49,8 @@ export class RdapClient extends BaseCacheableService {
                     throw new Error(errMsg);
                 }
 
-                const result = (await res.json()) as RdapResponse;
-                return this.normalizeRdapResponse(result, domain);
+                const rdapResponse = (await res.json()) as RdapResponse;
+                return this.normalizeRdapResponse(rdapResponse, domain);
             },
             this.cacheTTL
         );

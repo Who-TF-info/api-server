@@ -42,7 +42,17 @@ whoisRoutes.get('/:domain', async (c) => {
             errorMessage = 'Invalid domain format';
 
             // Log invalid domain request
-            await requestLogger.saveRequest(c, user, extraction, null, 'whois', statusCode, errorCode, errorMessage);
+            await requestLogger.saveRequest(
+                c,
+                user,
+                extraction,
+                null,
+                'whois',
+                statusCode,
+                errorCode,
+                errorMessage,
+                false
+            );
 
             return c.json(createFailedWhoisResponse(domain, 'invalid domain', extraction.tld), 400);
         }
@@ -52,18 +62,39 @@ whoisRoutes.get('/:domain', async (c) => {
         if (results === null) {
             // Domain is available (no WHOIS data found) - use 204 status
             statusCode = 204;
-            await requestLogger.saveRequest(c, user, extraction, null, 'whois', statusCode);
+            await requestLogger.saveRequest(
+                c,
+                user,
+                extraction,
+                null,
+                'whois',
+                statusCode,
+                undefined,
+                undefined,
+                false
+            );
 
             c.status(204);
             return c.json(createAvailableWhoisResponse(domain, extraction.tld));
         }
 
-        // Successfully retrieved WHOIS data
-        await requestLogger.saveRequest(c, user, extraction, results, 'whois', statusCode);
+        // Successfully retrieved WHOIS data - extract cache hit info
+        const { isCached, ...whoisDataWithoutCacheInfo } = results;
+        await requestLogger.saveRequest(
+            c,
+            user,
+            extraction,
+            whoisDataWithoutCacheInfo,
+            'whois',
+            statusCode,
+            undefined,
+            undefined,
+            isCached
+        );
 
         return c.json(
             createSuccessWhoisResponse(domain, extraction.tld, false, {
-                ...results,
+                ...whoisDataWithoutCacheInfo,
                 rawWhois: undefined,
                 rawRdap: undefined,
             })
@@ -88,7 +119,8 @@ whoisRoutes.get('/:domain', async (c) => {
             'whois',
             statusCode,
             errorCode,
-            errorMessage
+            errorMessage,
+            false
         );
 
         throw error;

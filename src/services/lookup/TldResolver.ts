@@ -37,7 +37,10 @@ export class TldResolver extends BaseCacheableService {
         this.availabilityService = availabilityService;
     }
 
-    async getWhoisData(domain: string | unknown, skipAvailabilityCheck = false): Promise<WhoisData | null> {
+    async getWhoisData(
+        domain: string | unknown,
+        skipAvailabilityCheck = false
+    ): Promise<(WhoisData & { isCached: boolean }) | null> {
         // Input validation
         if (!domain || typeof domain !== 'string' || domain.trim().length === 0) {
             this.logger.warn({ domain }, 'Invalid domain parameter provided');
@@ -45,140 +48,126 @@ export class TldResolver extends BaseCacheableService {
         }
 
         const normalizedDomain = domain.toLowerCase().trim();
-        const cacheKey = `TldResolver::getWhoisData::${normalizedDomain}`;
+        this.logger.debug({ domain: normalizedDomain }, 'Starting WHOIS data lookup');
 
-        return this.rememberCache(
-            cacheKey,
-            async () => {
-                this.logger.debug({ domain: normalizedDomain }, 'Starting WHOIS data lookup');
-
-                // Check availability first (unless skipped)
-                if (!skipAvailabilityCheck) {
-                    try {
-                        const isAvailable = await this.availabilityService.check(normalizedDomain);
-                        if (isAvailable) {
-                            this.logger.debug(
-                                { domain: normalizedDomain },
-                                'Domain is available, skipping WHOIS lookup'
-                            );
-                            return null;
-                        }
-                        this.logger.debug(
-                            { domain: normalizedDomain },
-                            'Domain is registered, proceeding with WHOIS lookup'
-                        );
-                    } catch (error) {
-                        this.logger.warn(
-                            {
-                                domain: normalizedDomain,
-                                error: error instanceof Error ? error.message : String(error),
-                            },
-                            'Availability check failed, proceeding with WHOIS lookup'
-                        );
-                    }
-                }
-
-                // 1. Extract TLD from domain
-                const tld = await this.tldExtractor.extract(normalizedDomain);
-                this.logger.debug({ domain: normalizedDomain, tld }, 'Extracted TLD');
-
-                // 2. Check if valid
-                const isValid = await this.tldExtractor.isValidTld(tld);
-                if (!isValid) {
-                    this.logger.warn({ domain: normalizedDomain, tld }, 'Invalid TLD');
+        // Check availability first (unless skipped)
+        if (!skipAvailabilityCheck) {
+            try {
+                const isAvailable = await this.availabilityService.check(normalizedDomain);
+                if (isAvailable) {
+                    this.logger.debug({ domain: normalizedDomain }, 'Domain is available, skipping WHOIS lookup');
                     return null;
                 }
-
-                // 3. Fetch TopLevelDomainEntity
-                const tldEntity = await this.getTldEntity(tld);
-                if (!tldEntity) {
-                    this.logger.warn({ domain: normalizedDomain, tld }, 'TLD entity not found in database');
-                    return null;
-                }
-
-                this.logger.debug(
+                this.logger.debug({ domain: normalizedDomain }, 'Domain is registered, proceeding with WHOIS lookup');
+            } catch (error) {
+                this.logger.warn(
                     {
                         domain: normalizedDomain,
-                        tld,
+                        error: error instanceof Error ? error.message : String(error),
+                    },
+                    'Availability check failed, proceeding with WHOIS lookup'
+                );
+            }
+        }
+
+        // 1. Extract TLD from domain
+        const tld = await this.tldExtractor.extract(normalizedDomain);
+        this.logger.debug({ domain: normalizedDomain, tld }, 'Extracted TLD');
+
+        // 2. Check if valid
+        const isValid = await this.tldExtractor.isValidTld(tld);
+        if (!isValid) {
+            this.logger.warn({ domain: normalizedDomain, tld }, 'Invalid TLD');
+            return null;
+        }
+
+        // 3. Fetch TopLevelDomainEntity
+        const tldEntity = await this.getTldEntity(tld);
+        if (!tldEntity) {
+            this.logger.warn({ domain: normalizedDomain, tld }, 'TLD entity not found in database');
+            return null;
+        }
+
+        this.logger.debug(
+            {
+                domain: normalizedDomain,
+                tld,
+                rdapServer: tldEntity.rdapServer,
+                whoisServer: tldEntity.whoisServer,
+            },
+            'Retrieved TLD entity'
+        );
+
+        // 4. Try RDAP first if available
+        if (tldEntity.rdapServer) {
+            try {
+                this.logger.debug(
+                    { domain: normalizedDomain, rdapServer: tldEntity.rdapServer },
+                    'Attempting RDAP query'
+                );
+                const rdapResult = await this.rdapClient.query(normalizedDomain, tldEntity.rdapServer);
+                if (rdapResult) {
+                    this.logger.info(
+                        { domain: normalizedDomain, source: 'rdap' },
+                        'Successfully retrieved WHOIS data via RDAP'
+                    );
+                    return rdapResult;
+                }
+                this.logger.debug(
+                    { domain: normalizedDomain, rdapServer: tldEntity.rdapServer },
+                    'RDAP query returned null result'
+                );
+            } catch (error) {
+                this.logger.error(
+                    {
+                        error: error instanceof Error ? error.message : String(error),
+                        domain: normalizedDomain,
                         rdapServer: tldEntity.rdapServer,
+                    },
+                    'RDAP query failed, attempting WHOIS fallback'
+                );
+            }
+        }
+
+        // 5. Fallback to WHOIS if available
+        if (tldEntity.whoisServer) {
+            try {
+                this.logger.debug(
+                    { domain: normalizedDomain, whoisServer: tldEntity.whoisServer },
+                    'Attempting WHOIS query'
+                );
+                const whoisResult = await this.whoisClient.query(normalizedDomain, tldEntity.whoisServer);
+                if (whoisResult) {
+                    this.logger.info(
+                        { domain: normalizedDomain, source: 'whois' },
+                        'Successfully retrieved WHOIS data via WHOIS'
+                    );
+                    return whoisResult;
+                }
+                this.logger.debug(
+                    { domain: normalizedDomain, whoisServer: tldEntity.whoisServer },
+                    'WHOIS query returned null result'
+                );
+            } catch (error) {
+                this.logger.error(
+                    {
+                        error: error instanceof Error ? error.message : String(error),
+                        domain: normalizedDomain,
                         whoisServer: tldEntity.whoisServer,
                     },
-                    'Retrieved TLD entity'
+                    'WHOIS query failed'
                 );
+            }
+        }
 
-                // 4. Try RDAP first if available
-                if (tldEntity.rdapServer) {
-                    try {
-                        this.logger.debug(
-                            { domain: normalizedDomain, rdapServer: tldEntity.rdapServer },
-                            'Attempting RDAP query'
-                        );
-                        const rdapResult = await this.rdapClient.query(normalizedDomain, tldEntity.rdapServer);
-                        if (rdapResult) {
-                            this.logger.info(
-                                { domain: normalizedDomain, source: 'rdap' },
-                                'Successfully retrieved WHOIS data via RDAP'
-                            );
-                            return rdapResult;
-                        }
-                        this.logger.debug(
-                            { domain: normalizedDomain, rdapServer: tldEntity.rdapServer },
-                            'RDAP query returned null result'
-                        );
-                    } catch (error) {
-                        this.logger.error(
-                            {
-                                error: error instanceof Error ? error.message : String(error),
-                                domain: normalizedDomain,
-                                rdapServer: tldEntity.rdapServer,
-                            },
-                            'RDAP query failed, attempting WHOIS fallback'
-                        );
-                    }
-                }
+        // 6. No servers available or all failed
+        if (!tldEntity.rdapServer && !tldEntity.whoisServer) {
+            this.logger.warn({ domain: normalizedDomain, tld }, 'No RDAP or WHOIS servers configured for TLD');
+        } else {
+            this.logger.warn({ domain: normalizedDomain, tld }, 'All available lookup methods failed');
+        }
 
-                // 5. Fallback to WHOIS if available
-                if (tldEntity.whoisServer) {
-                    try {
-                        this.logger.debug(
-                            { domain: normalizedDomain, whoisServer: tldEntity.whoisServer },
-                            'Attempting WHOIS query'
-                        );
-                        const whoisResult = await this.whoisClient.query(normalizedDomain, tldEntity.whoisServer);
-                        if (whoisResult) {
-                            this.logger.info(
-                                { domain: normalizedDomain, source: 'whois' },
-                                'Successfully retrieved WHOIS data via WHOIS'
-                            );
-                            return whoisResult;
-                        }
-                        this.logger.debug(
-                            { domain: normalizedDomain, whoisServer: tldEntity.whoisServer },
-                            'WHOIS query returned null result'
-                        );
-                    } catch (error) {
-                        this.logger.error(
-                            {
-                                error: error instanceof Error ? error.message : String(error),
-                                domain: normalizedDomain,
-                                whoisServer: tldEntity.whoisServer,
-                            },
-                            'WHOIS query failed'
-                        );
-                    }
-                }
-
-                // 6. No servers available or all failed
-                if (!tldEntity.rdapServer && !tldEntity.whoisServer) {
-                    this.logger.warn({ domain: normalizedDomain, tld }, 'No RDAP or WHOIS servers configured for TLD');
-                } else {
-                    this.logger.warn({ domain: normalizedDomain, tld }, 'All available lookup methods failed');
-                }
-
-                return null;
-            },
-            this.cacheTTL
-        );
+        return null;
     }
 
     protected async getTldEntity(tld: string): Promise<TopLevelDomainEntity | null> {

@@ -71,7 +71,8 @@ export class RequestLogger extends BaseCacheableService {
         requestType: 'availability' | 'whois' | 'bulk' = 'whois',
         statusCode: number = 200,
         errorCode?: string,
-        errorMessage?: string
+        errorMessage?: string,
+        cacheHit: boolean = false
     ): Promise<RequestEntity> {
         const startTime = context.get('requestStartTime') || Date.now();
         const responseTimeMs = Date.now() - startTime;
@@ -111,7 +112,7 @@ export class RequestLogger extends BaseCacheableService {
             method: context.req.method,
             statusCode,
             responseTimeMs,
-            cacheHit: false, // TODO: implement cache hit detection
+            cacheHit,
             errorCode: errorCode || null,
             errorMessage: errorMessage || null,
             ipAddress,
