@@ -5,6 +5,7 @@ export type AppEnv = {
     Variables: {
         requestId: string;
         user?: UserEntity;
+        requestStartTime?: number;
     };
 };
 

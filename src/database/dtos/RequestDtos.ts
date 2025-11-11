@@ -7,8 +7,8 @@ import { createEntitySchemas } from 'typeorm-zod';
 export interface RequestDto extends BaseDto {
     user: UserDto;
     userId: number;
-    domain: DomainDto;
-    domainId: number;
+    domain?: DomainDto | null;
+    domainId?: number | null;
     requestType: 'availability' | 'whois' | 'bulk';
     endpoint: string;
     method: string;

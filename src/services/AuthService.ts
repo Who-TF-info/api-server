@@ -32,12 +32,20 @@ export class AuthService {
 
     protected async ensureTestUserExists(): Promise<void> {
         if ([NodeEnv.test, NodeEnv.development].includes(this.env)) {
-            const testUserData = {
-                apiKey: AuthService.testApiKey,
-                isActive: true,
-                name: 'Test User',
-            };
-            await this.usersRepo.upsert(testUserData, ['apiKey']);
+            // Check if test user already exists
+            const existingUser = await this.usersRepo.findOne({ apiKey: AuthService.testApiKey });
+
+            if (!existingUser) {
+                // Only create if user doesn't exist - this preserves tracking data
+                const testUserData = {
+                    apiKey: AuthService.testApiKey,
+                    isActive: true,
+                    name: 'Test User',
+                    totalRequests: 0,
+                    lastRequestAt: null,
+                };
+                await this.usersRepo.save(this.usersRepo.repository.create(testUserData));
+            }
         }
     }
 
@@ -45,10 +53,12 @@ export class AuthService {
         if (!apiKey || apiKey.trim().length === 0) {
             return null;
         }
+
         const user = await this.usersRepo.findOne({
             apiKey,
             isActive: true,
         });
+
         if (!user) {
             // Hash the API key for secure logging using Bun's built-in hashing
             const hashedKey = Bun.hash(apiKey).toString(16).substring(0, 12);

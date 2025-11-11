@@ -21,15 +21,15 @@ export class RequestEntity extends AppEntity {
     @ZodProperty(z.number())
     userId: number;
 
-    @ManyToOne(() => DomainEntity, { nullable: false })
+    @ManyToOne(() => DomainEntity, { nullable: true })
     @JoinColumn({ name: 'domain_id' })
-    @ZodProperty(z.instanceof(DomainEntity))
-    domain: Relation<DomainEntity>;
+    @ZodProperty(z.instanceof(DomainEntity).nullable().optional())
+    domain?: Relation<DomainEntity> | null;
 
-    @Column({ type: 'int', nullable: false })
+    @Column({ type: 'int', nullable: true })
     @Index()
-    @ZodProperty(z.number())
-    domainId: number;
+    @ZodProperty(z.number().nullable().optional())
+    domainId?: number | null;
 
     // Request metadata
     @Column({

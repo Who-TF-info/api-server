@@ -6,7 +6,7 @@ import { Hono } from 'hono';
 
 const healthRoutes = new Hono<AppEnv>();
 
-healthRoutes.get('/health', async (c) => {
+healthRoutes.get('/', async (c) => {
     const logger = appContainer.resolve(AppLogger);
     const requestId = c.get('requestId');
 

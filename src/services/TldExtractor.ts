@@ -7,6 +7,8 @@ import type { Logger } from 'pino';
 import { inject, singleton } from 'tsyringe';
 import { Like } from 'typeorm';
 
+export type DomainExtractionInfo = { domainName: string; tld: string; isValid: boolean };
+
 @singleton()
 export class TldExtractor extends BaseCacheableService {
     protected tldRepo: TopLevelDomainRepoService;
@@ -134,6 +136,69 @@ export class TldExtractor extends BaseCacheableService {
         } catch (error) {
             this.logger.error({ error, tld }, 'Failed to validate TLD');
             return false;
+        }
+    }
+
+    async extractDomainInfo(domain: string): Promise<DomainExtractionInfo> {
+        try {
+            this.logger.debug({ domain }, 'Extracting domain info');
+
+            let tld: string;
+            let domainName: string;
+            let isValid = true;
+
+            // Extract TLD using existing method
+            try {
+                tld = await this.extract(domain);
+            } catch (error) {
+                this.logger.debug({ domain, error }, 'Failed to extract TLD');
+                // Return fallback values for logging purposes
+                return {
+                    domainName: domain,
+                    tld: 'unknown',
+                    isValid: false,
+                };
+            }
+
+            // Validate TLD
+            const isValidTLD = await this.isValidTld(tld);
+            if (!isValidTLD) {
+                this.logger.debug({ domain, tld }, 'Invalid TLD detected');
+                isValid = false;
+            }
+
+            // Extract domain name (everything before the TLD)
+            const normalized = this.normalize(domain);
+            const parts = normalized.split('.');
+
+            // Remove TLD parts from the end
+            const tldParts = tld.split('.');
+            const domainParts = parts.slice(0, -tldParts.length);
+
+            if (domainParts.length === 0) {
+                this.logger.debug({ domain, tld }, 'No domain name found');
+                domainName = domain; // Use original domain for logging
+                isValid = false;
+            } else {
+                domainName = domainParts.join('.');
+
+                // Validate domain name is not empty and contains valid characters
+                if (!domainName || domainName.trim().length === 0) {
+                    this.logger.debug({ domain, tld, domainName }, 'Empty domain name detected');
+                    domainName = domain; // Use original domain for logging
+                    isValid = false;
+                }
+            }
+
+            this.logger.debug({ domain, tld, domainName, isValid }, 'Domain info extraction completed');
+            return { domainName, tld, isValid };
+        } catch (error) {
+            this.logger.error({ error, domain }, 'Failed to extract domain info');
+            return {
+                domainName: domain,
+                tld: 'unknown',
+                isValid: false,
+            };
         }
     }
 }

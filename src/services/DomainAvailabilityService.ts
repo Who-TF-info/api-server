@@ -20,26 +20,33 @@ export class DomainAvailabilityService extends BaseCacheableService {
     }
 
     async check(domain: string) {
-        const recordExists = await this.dnsRecordsExist(domain);
-        if (recordExists) {
-            return false;
-        }
+        const cacheKey = `DomainAvailabilityService::check::${domain.toLowerCase().trim()}`;
+        return this.rememberCache(
+            cacheKey,
+            async () => {
+                const recordExists = await this.dnsRecordsExist(domain);
+                if (recordExists) {
+                    return false;
+                }
 
-        try {
-            const { response } = await this.porkbunClient.domain.checkDomain({ domain });
-            return response.avail === 'yes';
-        } catch (error) {
-            this.logger.warn(
-                {
-                    domain,
-                    error: error instanceof Error ? error.message : String(error),
-                },
-                'PorkBun API check failed, falling back to DNS-only availability check'
-            );
-            // If PorkBun fails (e.g., missing credentials), fall back to DNS-only check
-            // If no DNS records exist, assume domain is available
-            return !recordExists;
-        }
+                try {
+                    const { response } = await this.porkbunClient.domain.checkDomain({ domain });
+                    return response.avail === 'yes';
+                } catch (error) {
+                    this.logger.warn(
+                        {
+                            domain,
+                            error: error instanceof Error ? error.message : String(error),
+                        },
+                        'PorkBun API check failed, falling back to DNS-only availability check'
+                    );
+                    // If PorkBun fails (e.g., missing credentials), fall back to DNS-only check
+                    // If no DNS records exist, assume domain is available
+                    return !recordExists;
+                }
+            },
+            30000 // 30 seconds cache TTL for availability checks
+        );
     }
 
     protected async dnsRecordsExist(domain: string): Promise<boolean> {
