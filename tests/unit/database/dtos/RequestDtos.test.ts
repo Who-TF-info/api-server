@@ -61,24 +61,20 @@ describe('RequestDtos', () => {
             const validData = {
                 requestType: 'whois' as const,
                 statusCode: 200,
-                cacheHit: true,
             };
 
             const result = validateQueryRequest(validData);
             expect(result.requestType).toBe('whois');
             expect(result.statusCode).toBe(200);
-            expect(result.cacheHit).toBe(true);
         });
 
         it('should pass with relationship ids', () => {
             const validData = {
                 userId: 1,
-                domainId: 2,
             };
 
             const result = validateQueryRequest(validData);
             expect(result.userId).toBe(1);
-            expect(result.domainId).toBe(2);
         });
 
         it('should pass with error fields', () => {
@@ -94,7 +90,7 @@ describe('RequestDtos', () => {
 
         it('should fail with invalid field types', () => {
             const invalidData = {
-                cacheHit: 'not-boolean',
+                responseTimeMs: 'not-a-number',
             };
 
             expect(() => validateQueryRequest(invalidData)).toThrow();

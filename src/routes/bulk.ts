@@ -2,7 +2,7 @@ import { appContainer } from '@app/config';
 import { authMiddleware } from '@app/middleware/authMiddleware';
 import { BulkWhoisService } from '@app/services/BulkWhoisService';
 import { RequestLogger } from '@app/services/RequestLogger';
-import { TldExtractor } from '@app/services/TldExtractor';
+import { type DomainExtractionInfo, TldExtractor } from '@app/services/TldExtractor';
 import type { AppEnv } from '@app/types/HonoEnvContext';
 import type { BulkWhoisRequest } from '@app/types/responses/BulkWhoisResponse';
 import { createBulkWhoisErrorResponse, createBulkWhoisResponse } from '@app/types/responses/BulkWhoisResponse';
@@ -75,45 +75,41 @@ bulkRoutes.post(
             // Create response
             const response = createBulkWhoisResponse(results, totalProcessingTime);
 
-            // Calculate aggregate metrics for logging
-            const _successful = results.filter((r) => r.success).length;
-            const cacheHits = results.filter((r) => r.cache_hit === true).length;
-            const totalCacheableResults = results.filter((r) => r.success && r.available === false).length;
-            const aggregateCacheHitRate = totalCacheableResults > 0 ? cacheHits / totalCacheableResults : 0;
+            // Log the HTTP request first
+            const requestEntity = await requestLogger.saveRequest(c, user, 'bulk', statusCode);
 
-            // Log the bulk request with summary metrics
-            // We'll use the first domain for extraction info, as this is for aggregate logging
-            const firstValidDomain = requestData.domains.find((d) => d && d.trim().length > 0);
-            let extraction = null;
-            if (firstValidDomain) {
-                try {
-                    extraction = await tldExtractor.extractDomainInfo(firstValidDomain);
-                } catch {
-                    extraction = {
-                        domainName: 'bulk-operation',
-                        tld: 'bulk',
-                        isValid: true,
+            // Prepare domain lookup data for batch logging
+            const domainLookupData = await Promise.all(
+                results.map(async (result) => {
+                    let extraction: DomainExtractionInfo;
+                    try {
+                        extraction = await tldExtractor.extractDomainInfo(result.domain);
+                    } catch {
+                        // Create fallback extraction for invalid domains
+                        const parts = result.domain.split('.');
+                        extraction = {
+                            domainName: parts.slice(0, -1).join('.') || result.domain,
+                            tld: parts[parts.length - 1] || 'unknown',
+                            isValid: false,
+                        };
+                    }
+
+                    return {
+                        extraction,
+                        whoisData: result.whoisData || null,
+                        lookupType: 'whois' as const,
+                        success: result.success,
+                        processingTimeMs: result.processing_time_ms || 0,
+                        cacheHit: result.cache_hit || false,
+                        errorCode: result.error ? 'DOMAIN_LOOKUP_ERROR' : undefined,
+                        errorMessage: result.error,
+                        isAvailable: result.available,
                     };
-                }
-            }
-
-            const fallbackExtraction = extraction || {
-                domainName: 'bulk-operation',
-                tld: 'bulk',
-                isValid: true,
-            };
-
-            await requestLogger.saveRequest(
-                c,
-                user,
-                fallbackExtraction,
-                null, // Bulk requests don't have a single WhoisData object
-                'bulk',
-                statusCode,
-                undefined,
-                undefined,
-                aggregateCacheHitRate > 0
+                })
             );
+
+            // Save all domain lookups
+            await requestLogger.saveDomainLookups(requestEntity, domainLookupData);
 
             return c.json(response);
         } catch (error) {
@@ -121,24 +117,8 @@ bulkRoutes.post(
             errorCode = 'BULK_PROCESSING_ERROR';
             errorMessage = error instanceof Error ? error.message : 'Unknown bulk processing error';
 
-            // Log error request
-            const fallbackExtraction = {
-                domainName: 'bulk-operation',
-                tld: 'bulk',
-                isValid: false,
-            };
-
-            await requestLogger.saveRequest(
-                c,
-                user,
-                fallbackExtraction,
-                null,
-                'bulk',
-                statusCode,
-                errorCode,
-                errorMessage,
-                false
-            );
+            // Log error request (HTTP level only since bulk processing failed)
+            await requestLogger.saveRequest(c, user, 'bulk', statusCode, errorCode, errorMessage);
 
             return c.json(createBulkWhoisErrorResponse(errorMessage), 500);
         }

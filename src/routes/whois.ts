@@ -41,37 +41,52 @@ whoisRoutes.get('/:domain', async (c) => {
             errorCode = 'INVALID_DOMAIN';
             errorMessage = 'Invalid domain format';
 
-            // Log invalid domain request
-            await requestLogger.saveRequest(
+            // Log the HTTP request and failed domain lookup
+            const requestEntity = await requestLogger.saveRequest(
                 c,
                 user,
-                extraction,
-                null,
                 'whois',
                 statusCode,
                 errorCode,
-                errorMessage,
-                false
+                errorMessage
+            );
+
+            await requestLogger.saveDomainLookup(
+                requestEntity,
+                extraction,
+                null,
+                'whois',
+                false,
+                0,
+                false,
+                errorCode,
+                errorMessage
             );
 
             return c.json(createFailedWhoisResponse(domain, 'invalid domain', extraction.tld), 400);
         }
 
+        const startTime = Date.now();
         const results = await resolver.getWhoisData(domain);
 
         if (results === null) {
             // Domain is available (no WHOIS data found) - use 204 status
             statusCode = 204;
-            await requestLogger.saveRequest(
-                c,
-                user,
+            const processingTime = Date.now() - startTime;
+
+            const requestEntity = await requestLogger.saveRequest(c, user, 'whois', statusCode);
+
+            await requestLogger.saveDomainLookup(
+                requestEntity,
                 extraction,
                 null,
                 'whois',
-                statusCode,
+                true,
+                processingTime,
+                false,
                 undefined,
                 undefined,
-                false
+                true
             );
 
             c.status(204);
@@ -79,17 +94,22 @@ whoisRoutes.get('/:domain', async (c) => {
         }
 
         // Successfully retrieved WHOIS data - extract cache hit info
+        const processingTime = Date.now() - startTime;
         const { isCached, ...whoisDataWithoutCacheInfo } = results;
-        await requestLogger.saveRequest(
-            c,
-            user,
+
+        const requestEntity = await requestLogger.saveRequest(c, user, 'whois', statusCode);
+
+        await requestLogger.saveDomainLookup(
+            requestEntity,
             extraction,
             whoisDataWithoutCacheInfo,
             'whois',
-            statusCode,
+            true,
+            processingTime,
+            isCached,
             undefined,
             undefined,
-            isCached
+            false
         );
 
         return c.json(
@@ -111,16 +131,18 @@ whoisRoutes.get('/:domain', async (c) => {
             isValid: false,
         };
 
-        await requestLogger.saveRequest(
-            c,
-            user,
+        const requestEntity = await requestLogger.saveRequest(c, user, 'whois', statusCode, errorCode, errorMessage);
+
+        await requestLogger.saveDomainLookup(
+            requestEntity,
             fallbackExtraction,
             null,
             'whois',
-            statusCode,
+            false,
+            0,
+            false,
             errorCode,
-            errorMessage,
-            false
+            errorMessage
         );
 
         throw error;

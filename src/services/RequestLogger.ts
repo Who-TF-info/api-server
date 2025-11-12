@@ -1,11 +1,13 @@
 import type { QueryDeepPartialEntity } from '@app/database/core/types';
+import { DomainLookupRepoService } from '@app/database/db-service/DomainLookupRepoService';
 import { DomainNameRepoService } from '@app/database/db-service/DomainNameRepoService';
 import { DomainRepoService } from '@app/database/db-service/DomainRepoService';
 import { RequestRepoService } from '@app/database/db-service/RequestRepoService';
 import { TopLevelDomainRepoService } from '@app/database/db-service/TopLevelDomainRepoService';
-import type { CreateRequestDto } from '@app/database/dtos';
+import type { CreateDomainLookupDto, CreateRequestDto } from '@app/database/dtos';
 import type {
     DomainEntity,
+    DomainLookupEntity,
     DomainNameEntity,
     RequestEntity,
     TopLevelDomainEntity,
@@ -23,6 +25,7 @@ import { inject, singleton } from 'tsyringe';
 @singleton()
 export class RequestLogger extends BaseCacheableService {
     protected requestsRepo: RequestRepoService;
+    protected domainLookupsRepo: DomainLookupRepoService;
     protected domainsRepo: DomainRepoService;
     protected domainNamesRepo: DomainNameRepoService;
     protected tldsRepo: TopLevelDomainRepoService;
@@ -31,12 +34,14 @@ export class RequestLogger extends BaseCacheableService {
         @inject(AppLogger) logger: Logger,
         @inject(Keyv) cache: Keyv,
         @inject(RequestRepoService) requestsRepo: RequestRepoService,
+        @inject(DomainLookupRepoService) domainLookupsRepo: DomainLookupRepoService,
         @inject(DomainRepoService) domainsRepo: DomainRepoService,
         @inject(DomainNameRepoService) domainNamesRepo: DomainNameRepoService,
         @inject(TopLevelDomainRepoService) tldsRepo: TopLevelDomainRepoService
     ) {
         super(logger, cache);
         this.requestsRepo = requestsRepo;
+        this.domainLookupsRepo = domainLookupsRepo;
         this.domainsRepo = domainsRepo;
         this.domainNamesRepo = domainNamesRepo;
         this.tldsRepo = tldsRepo;
@@ -66,53 +71,26 @@ export class RequestLogger extends BaseCacheableService {
     async saveRequest(
         context: AppContext,
         user: UserEntity,
-        extraction: DomainExtractionInfo,
-        whoisData: WhoisData | null,
         requestType: 'availability' | 'whois' | 'bulk' = 'whois',
         statusCode: number = 200,
         errorCode?: string,
-        errorMessage?: string,
-        cacheHit: boolean = false
+        errorMessage?: string
     ): Promise<RequestEntity> {
         const startTime = context.get('requestStartTime') || Date.now();
         const responseTimeMs = Date.now() - startTime;
 
-        // Create or update domain entities only if extraction is valid and has valid TLD
-        let domainEntityId: number | null = null;
-        if (extraction.isValid && this.isValidTldFormat(extraction.tld)) {
-            try {
-                const domainNameEntity = await this.upsertDomainName(extraction.domainName);
-                const tldEntity = await this.upsertTld(extraction.tld);
-                const domainEntity = await this.upsertDomain(domainNameEntity, tldEntity, whoisData);
-                domainEntityId = domainEntity.id;
-            } catch (error) {
-                // Log error but continue with request logging without domain reference
-                this.logger.warn(
-                    {
-                        error: error instanceof Error ? error.message : 'Unknown error',
-                        domainName: extraction.domainName,
-                        tld: extraction.tld,
-                    },
-                    'Failed to create domain entities, logging request without domain reference'
-                );
-            }
-        }
-
         // Extract client information
         const ipAddress = this.extractClientIP(context);
         const userAgent = context.req.header('user-agent') || null;
-        const requestId = context.get('requestId') as string;
 
         // Create request record
         const requestData: CreateRequestDto = {
             userId: user.id,
-            domainId: domainEntityId,
             requestType,
             endpoint: context.req.path,
             method: context.req.method,
             statusCode,
             responseTimeMs,
-            cacheHit,
             errorCode: errorCode || null,
             errorMessage: errorMessage || null,
             ipAddress,
@@ -124,12 +102,128 @@ export class RequestLogger extends BaseCacheableService {
         if (!requestEntity) {
             throw new Error('Failed to create request entity');
         }
-        this.logger.debug(
-            { requestId, domainId: domainEntityId, responseTimeMs, statusCode },
-            'Request logged successfully'
-        );
+
+        const requestId = context.get('requestId') as string;
+        this.logger.debug({ requestId, responseTimeMs, statusCode }, 'Request logged successfully');
 
         return requestEntity;
+    }
+
+    async saveDomainLookup(
+        requestEntity: RequestEntity,
+        extraction: DomainExtractionInfo,
+        whoisData: WhoisData | null,
+        lookupType: 'availability' | 'whois',
+        success: boolean,
+        processingTimeMs: number,
+        cacheHit: boolean = false,
+        errorCode?: string,
+        errorMessage?: string,
+        isAvailable?: boolean
+    ): Promise<DomainLookupEntity> {
+        // Create or update domain entities only if extraction is valid and has valid TLD
+        let domainEntityId: number | null = null;
+        if (extraction.isValid && this.isValidTldFormat(extraction.tld)) {
+            try {
+                const domainNameEntity = await this.upsertDomainName(extraction.domainName);
+                const tldEntity = await this.upsertTld(extraction.tld);
+                const domainEntity = await this.upsertDomain(domainNameEntity, tldEntity, whoisData);
+                domainEntityId = domainEntity.id;
+            } catch (error) {
+                // Log error but continue with domain lookup logging without domain reference
+                this.logger.warn(
+                    {
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                        domainName: extraction.domainName,
+                        tld: extraction.tld,
+                    },
+                    'Failed to create domain entities, logging lookup without domain reference'
+                );
+            }
+        }
+
+        // Create domain lookup record
+        const lookupData: CreateDomainLookupDto = {
+            requestId: requestEntity.id,
+            domainId: domainEntityId,
+            domainName: `${extraction.domainName}.${extraction.tld}`,
+            lookupType,
+            success,
+            cacheHit,
+            processingTimeMs,
+            errorCode: errorCode || null,
+            errorMessage: errorMessage || null,
+            whoisData: whoisData ? JSON.parse(JSON.stringify(whoisData)) : null,
+            isAvailable: isAvailable || null,
+        };
+
+        const lookupEntity = await this.domainLookupsRepo.save(this.domainLookupsRepo.repository.create(lookupData));
+        if (!lookupEntity) {
+            throw new Error('Failed to create domain lookup entity');
+        }
+
+        this.logger.debug(
+            {
+                requestId: requestEntity.id,
+                domainName: lookupData.domainName,
+                lookupType,
+                success,
+                cacheHit,
+                processingTimeMs,
+            },
+            'Domain lookup logged successfully'
+        );
+
+        return lookupEntity;
+    }
+
+    async saveDomainLookups(
+        requestEntity: RequestEntity,
+        lookupData: Array<{
+            extraction: DomainExtractionInfo;
+            whoisData: WhoisData | null;
+            lookupType: 'availability' | 'whois';
+            success: boolean;
+            processingTimeMs: number;
+            cacheHit?: boolean;
+            errorCode?: string;
+            errorMessage?: string;
+            isAvailable?: boolean;
+        }>
+    ): Promise<DomainLookupEntity[]> {
+        if (lookupData.length === 0) {
+            return [];
+        }
+
+        const lookupEntities: DomainLookupEntity[] = [];
+
+        // Process each lookup individually to handle domain entity creation
+        for (const lookup of lookupData) {
+            const entity = await this.saveDomainLookup(
+                requestEntity,
+                lookup.extraction,
+                lookup.whoisData,
+                lookup.lookupType,
+                lookup.success,
+                lookup.processingTimeMs,
+                lookup.cacheHit || false,
+                lookup.errorCode,
+                lookup.errorMessage,
+                lookup.isAvailable
+            );
+            lookupEntities.push(entity);
+        }
+
+        this.logger.info(
+            {
+                requestId: requestEntity.id,
+                lookupCount: lookupEntities.length,
+                successCount: lookupEntities.filter((l) => l.success).length,
+            },
+            'Bulk domain lookups logged successfully'
+        );
+
+        return lookupEntities;
     }
 
     protected upsertDomainName(domainName: string): Promise<DomainNameEntity> {

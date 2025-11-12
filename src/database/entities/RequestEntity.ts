@@ -3,12 +3,10 @@ import type { Relation } from 'typeorm';
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { ZodProperty } from 'typeorm-zod';
 import { z } from 'zod';
-import { DomainEntity } from './DomainEntity';
 import { UserEntity } from './UserEntity';
 
 @Entity()
 @Index(['userId', 'requestedAt'])
-@Index(['domainId', 'requestedAt'])
 export class RequestEntity extends AppEntity {
     // Foreign key relationships
     @ManyToOne(() => UserEntity, { nullable: false })
@@ -20,16 +18,6 @@ export class RequestEntity extends AppEntity {
     @Index()
     @ZodProperty(z.number())
     userId: number;
-
-    @ManyToOne(() => DomainEntity, { nullable: true })
-    @JoinColumn({ name: 'domain_id' })
-    @ZodProperty(z.instanceof(DomainEntity).nullable().optional())
-    domain?: Relation<DomainEntity> | null;
-
-    @Column({ type: 'int', nullable: true })
-    @Index()
-    @ZodProperty(z.number().nullable().optional())
-    domainId?: number | null;
 
     // Request metadata
     @Column({
@@ -57,10 +45,6 @@ export class RequestEntity extends AppEntity {
     @Column({ type: 'int', nullable: false })
     @ZodProperty(z.number().int())
     responseTimeMs: number;
-
-    @Column({ type: 'boolean', default: false, nullable: false })
-    @ZodProperty(z.boolean().default(false))
-    cacheHit: boolean;
 
     // Error tracking
     @Column({ type: 'varchar', length: 50, nullable: true })
