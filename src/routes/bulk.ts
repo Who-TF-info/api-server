@@ -6,6 +6,7 @@ import { type DomainExtractionInfo, TldExtractor } from '@app/services/TldExtrac
 import type { AppEnv } from '@app/types/HonoEnvContext';
 import type { BulkWhoisRequest } from '@app/types/responses/BulkWhoisResponse';
 import { createBulkWhoisErrorResponse, createBulkWhoisResponse } from '@app/types/responses/BulkWhoisResponse';
+import { AppLogger } from '@app/utils/createContainer';
 import { Hono } from 'hono';
 import { validator } from 'hono/validator';
 import { z } from 'zod';
@@ -53,6 +54,7 @@ bulkRoutes.post(
         const bulkService = appContainer.resolve(BulkWhoisService);
         const requestLogger = appContainer.resolve(RequestLogger);
         const tldExtractor = appContainer.resolve(TldExtractor);
+        const logger = appContainer.resolve(AppLogger);
 
         // Get authenticated user from context
         const user = c.get('user');
@@ -84,7 +86,11 @@ bulkRoutes.post(
                     let extraction: DomainExtractionInfo;
                     try {
                         extraction = await tldExtractor.extractDomainInfo(result.domain);
-                    } catch {
+                    } catch (error) {
+                        // Log extraction failure for observability
+                        logger.error(
+                            `Domain extraction failed for "${result.domain}": ${error instanceof Error ? error.message : String(error)}`
+                        );
                         // Create fallback extraction for invalid domains
                         const parts = result.domain.split('.');
                         extraction = {
