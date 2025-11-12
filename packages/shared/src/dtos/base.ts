@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const baseDtoSchema = z.object({
     id: z.number(),
     created: z.date(),
-    updated: z.date(),
+    updated: z.date().optional(),
 });
 
 export type BaseDto = z.infer<typeof baseDtoSchema>;
