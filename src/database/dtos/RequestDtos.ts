@@ -1,5 +1,4 @@
 import type { BaseDto } from '@app/database/dtos/BaseDto';
-import type { DomainDto } from '@app/database/dtos/DomainDtos';
 import type { UserDto } from '@app/database/dtos/UserDtos';
 import { RequestEntity } from '@app/database/entities';
 import { createEntitySchemas } from 'typeorm-zod';
@@ -7,14 +6,11 @@ import { createEntitySchemas } from 'typeorm-zod';
 export interface RequestDto extends BaseDto {
     user: UserDto;
     userId: number;
-    domain?: DomainDto | null;
-    domainId?: number | null;
     requestType: 'availability' | 'whois' | 'bulk';
     endpoint: string;
     method: string;
     statusCode: number;
     responseTimeMs: number;
-    cacheHit: boolean;
     errorCode: string | null | undefined;
     errorMessage: string | null | undefined;
     ipAddress: string | null | undefined;
@@ -22,9 +18,9 @@ export interface RequestDto extends BaseDto {
     requestedAt: Date;
 }
 
-export interface CreateRequestDto extends Omit<RequestDto, 'id' | 'created' | 'updated' | 'user' | 'domain'> {}
+export interface CreateRequestDto extends Omit<RequestDto, 'id' | 'created' | 'updated' | 'user'> {}
 
-export interface UpdateRequestDto extends Omit<Partial<RequestDto>, 'id' | 'created' | 'updated' | 'user' | 'domain'> {}
+export interface UpdateRequestDto extends Omit<Partial<RequestDto>, 'id' | 'created' | 'updated' | 'user'> {}
 
 export interface RequestQueryDto extends Partial<RequestDto> {}
 
