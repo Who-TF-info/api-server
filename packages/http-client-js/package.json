@@ -1,0 +1,42 @@
+{
+    "name": "@who-tf-info/http-client-js",
+    "version": "1.0.0",
+    "description": "TypeScript HTTP client for Who-TF.info API - Domain WHOIS & availability checking",
+    "private": true,
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "typecheck": "tsc --noEmit",
+        "test": "bun test",
+        "dev": "bun run --watch src/index.ts",
+        "clean": "rm -rf dist"
+    },
+    "keywords": [
+        "whois",
+        "domain",
+        "dns",
+        "api-client",
+        "who-tf-info",
+        "typescript"
+    ],
+    "devDependencies": {
+        "@types/bun": "latest",
+        "axios-mock-adapter": "^2.1.0"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@who-tf-info/shared": "workspace:*",
+        "axios": "^1.13.2"
+    },
+    "engines": {
+        "node": ">=18"
+    }
+}
