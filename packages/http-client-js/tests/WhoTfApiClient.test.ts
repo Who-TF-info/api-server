@@ -82,7 +82,7 @@ describe('WhoTfApiClient', () => {
 
             mockAxios.onGet(`${baseUrl}/api/v1/health`).reply(503, errorResponse);
 
-            await expect(client.getHealth()).rejects.toThrow(WhoTfApiError);
+            expect(client.getHealth()).rejects.toThrow(WhoTfApiError);
 
             try {
                 await client.getHealth();
@@ -334,25 +334,25 @@ describe('WhoTfApiClient', () => {
         it('should handle network errors', async () => {
             mockAxios.onGet(`${baseUrl}/api/v1/health`).networkError();
 
-            await expect(client.getHealth()).rejects.toThrow();
+            expect(client.getHealth()).rejects.toThrow();
         });
 
         it('should handle timeout errors', async () => {
             mockAxios.onGet(`${baseUrl}/api/v1/health`).timeout();
 
-            await expect(client.getHealth()).rejects.toThrow();
+            expect(client.getHealth()).rejects.toThrow();
         });
 
         it('should handle non-JSON error responses', async () => {
             mockAxios.onGet(`${baseUrl}/api/v1/health`).reply(500, 'Internal Server Error');
 
-            await expect(client.getHealth()).rejects.toThrow();
+            expect(client.getHealth()).rejects.toThrow();
         });
 
         it('should handle responses without error structure', async () => {
             mockAxios.onGet(`${baseUrl}/api/v1/health`).reply(500, { message: 'Unknown error' });
 
-            await expect(client.getHealth()).rejects.toThrow();
+            expect(client.getHealth()).rejects.toThrow();
         });
     });
 });

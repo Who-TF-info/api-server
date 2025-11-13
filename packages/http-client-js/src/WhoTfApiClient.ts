@@ -23,7 +23,7 @@ export class WhoTfApiClient {
     protected apiKey: string;
 
     constructor({ baseUrl, httpClient, apiKey }: WhoTfApiClientOptions) {
-        this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+        this.baseUrl = baseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
         this.httpClient = httpClient;
         this.apiKey = apiKey;
 
